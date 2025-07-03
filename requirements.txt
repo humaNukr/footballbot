@@ -1,0 +1,6 @@
+aiogram==3.7.0            # Основна бібліотека для Telegram-бота
+python-dotenv==1.0.1      # Робота з .env (токен, налаштування)
+asyncpg==0.29.0           # Драйвер для PostgreSQL
+SQLAlchemy==2.0.30        # ORM для БД
+loguru==0.7.2             # Зручне логування
+aiomysql==0.2.0
