@@ -10,7 +10,7 @@ start_keyboard = ReplyKeyboardMarkup(
 main_panel = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="Зареєструватися")],
-        [KeyboardButton(text="FAQ")]
+        [KeyboardButton(text="❓ FAQ")]
     ],
     resize_keyboard=True
 )
