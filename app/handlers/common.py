@@ -1,6 +1,8 @@
-from aiogram import Router, F
+from aiogram import Router, F, types
 from aiogram.filters import CommandStart
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+
+from app.db.models import add_user
 from app.keyboards.reply import start_keyboard
 from app.keyboards.reply import main_panel
 
@@ -20,15 +22,6 @@ async def process_start_button(message: Message):
         reply_markup=main_panel
         
     )
-
-
-@router.message(F.text == "Зареєструватися")
-async def register_handler(message: Message):
-    await message.answer("Ти зареєстрований ✅")
-
-
-
-
 
 #FAQ LOGIC
 @router.message(F.text == "❓ FAQ")
