@@ -3,9 +3,11 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 
 from app.db.models import add_user
+
 from app.keyboards.inline import back_to_menu
 from app.keyboards.reply import start_keyboard
-from app.keyboards.reply import main_panel
+
+from app.keyboards.reply import get_main_panel
 
 router = Router()
 
@@ -17,11 +19,10 @@ async def cmd_start(message: Message):
     )
 
 @router.message(F.text == "🚀 Погоджуюся")
-async def process_start_button(message: Message):
+async def process_start_button(message: Message, is_registered: bool):
     await message.answer(
         "Виберіть одну з опцій:",
-        reply_markup=main_panel
-        
+        reply_markup=get_main_panel(is_registered)
     )
 
 #FAQ LOGIC
@@ -55,7 +56,7 @@ async def faq_about(callback: CallbackQuery):
 async def faq_matches(callback: CallbackQuery):
     await callback.message.edit_text(
         "📅 <b>Коли буде наступна гра?</b>\n\n"
-        "– Адміністратор сам вирішує і запускає розсилку. Ви отримаєте повідомлення і зможете підтвердити участь.",
+        "Адміністратор сам вирішує і запускає розсилку. Ви отримаєте повідомлення і зможете підтвердити участь.",
         reply_markup=back_to_menu()
     )
     await callback.answer()
@@ -64,7 +65,7 @@ async def faq_matches(callback: CallbackQuery):
 async def faq_admin(callback: CallbackQuery):
     await callback.message.edit_text(
         "🛠️ <b>Хочете щось запропонувати або повідомити про баг</b>\n\n"
-        "– Напиши напряму адміну: @cartuuz",
+        "Напиши напряму адміну: @cartuuz",
         reply_markup=back_to_menu()
     )
     await callback.answer()
