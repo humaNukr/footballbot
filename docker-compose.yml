@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8
+    container_name: football_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: users_db
+      MYSQL_USER: football
+      MYSQL_PASSWORD: footballpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  bot:
+    build: .
+    container_name: football_bot
+    restart: always
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - DB_HOST=db
+      - DB_USER=football
+      - DB_PASS=footballpass
+      - DB_NAME=users_db
+    volumes:
+      - .:/usr/src/app
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_container
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+    environment:
+     PMA_HOST: db
+
+volumes:
+  db_data:
+
