@@ -9,11 +9,11 @@ router = Router()
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer(
-        "Привіт! Натисни <b>Start</b>, щоб розпочати ⚽",
+        "Привіт! Підтвердіть, що ви погоджуєтеся з політикою конфіденційності ⚽",
         reply_markup=start_keyboard
     )
 
-@router.message(F.text == "🚀 Start")
+@router.message(F.text == "🚀 Погоджуюся")
 async def process_start_button(message: Message):
     await message.answer(
         "Виберіть одну з опцій:",
