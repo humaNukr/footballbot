@@ -20,9 +20,9 @@ async def main():
     db = Database()
     await db.connect()
     try:
-        await dp.start_polling(bot)
+        await dp.start_polling(bot, db=db)
     finally:
         await db.close()
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(dp.start_polling(bot))
+    asyncio.run(main())

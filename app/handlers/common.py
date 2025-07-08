@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 
 from app.db.models import add_user
+from app.keyboards.inline import back_to_menu
 from app.keyboards.reply import start_keyboard
 from app.keyboards.reply import main_panel
 
@@ -69,12 +70,7 @@ async def faq_admin(callback: CallbackQuery):
     await callback.answer()
 
 
-def back_to_menu():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔙 Назад до FAQ", callback_data="faq_back")]
-        ]
-    )
+
 
 @router.callback_query(F.data == "faq_back")
 async def faq_back(callback: CallbackQuery):
