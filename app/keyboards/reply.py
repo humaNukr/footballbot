@@ -8,13 +8,14 @@ start_keyboard = ReplyKeyboardMarkup(
 )
 
 def get_main_panel(is_registered: bool) -> ReplyKeyboardMarkup:
-
-    buttons = [
-        [KeyboardButton(text="📅 Розклад"), KeyboardButton(text="❓ FAQ")]
-    ]
     if not is_registered:
-        buttons.remove([KeyboardButton(text="📅 Розклад"), KeyboardButton(text="❓ FAQ")])
-        buttons.append([KeyboardButton(text="Зареєструватися")])
+        buttons = [
+            [KeyboardButton(text="Зареєструватися")]
+        ]
+    else:
+        buttons = [
+            [KeyboardButton(text="📅 Розклад"), KeyboardButton(text="❓ FAQ")]
+        ]
 
     return ReplyKeyboardMarkup(
         keyboard=buttons,

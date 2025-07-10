@@ -21,7 +21,7 @@ async def register_user(message: Message, state: FSMContext, is_registered: bool
         await message.answer("Ви вже зареєстровані ✅")
         return
 
-    await message.answer("Введіть ваше ім’я 📝:", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Введіть ваше ім'я 📝:", reply_markup=ReplyKeyboardRemove())
     await state.set_state(RegisterState.waiting_for_name)
 
 @router.message(RegisterState.waiting_for_name)
@@ -34,9 +34,8 @@ async def process_name(message: Message, state: FSMContext, db: Database):
         telegram_id=telegram_id,
         username=message.from_user.username,
         first_name=name,
-        last_name=message.from_user.last_name,
     )
 
     await message.answer(f"Дякую, {name}! Ви зареєстровані ✅", reply_markup=get_main_panel(is_registered=True))
-    logger.info(f"Користувач {telegram_id} зареєстрований з ім’ям {name}.")
+    logger.info(f"Користувач {telegram_id} зареєстрований з ім'ям {name}.")
     await state.clear()

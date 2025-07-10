@@ -3,3 +3,38 @@
 [2025-07-08 18:49:30,008] [INFO]: Користувач 904685941 зареєстрований з ім’ям пиво.
 [2025-07-08 18:51:07,186] [INFO]: Користувач 867039624 зареєстрований з ім’ям Адміни лохі.
 [2025-07-08 18:52:08,229] [INFO]: Користувач 867039624 зареєстрований з ім’ям Лохі ви.
+[2025-07-10 15:47:38,471] [INFO]: User 1456810112 sent /start command
+[2025-07-10 15:47:39,451] [INFO]: User 1456810112 clicked 'Погоджуюся', is_registered: False
+[2025-07-10 15:47:40,718] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:47:42,029] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:47:46,044] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:47:46,408] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:47:46,597] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:47:46,823] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:53:27,228] [INFO]: User 1456810112 sent /start command
+[2025-07-10 15:53:28,247] [INFO]: User 1456810112 clicked 'Погоджуюся', is_registered: False
+[2025-07-10 15:53:29,139] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:53:30,190] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:53:30,848] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:53:30,959] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:56:12,310] [INFO]: User 1456810112 sent /start command
+[2025-07-10 15:56:14,152] [INFO]: User 1456810112 clicked 'Погоджуюся', is_registered: False
+[2025-07-10 15:56:15,889] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:56:19,417] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:56:20,296] [WARNING]: Unhandled message from user 1456810112: 'Зареєструватися'
+[2025-07-10 15:59:04,725] [INFO]: User 1456810112 sent /start command
+[2025-07-10 15:59:05,819] [INFO]: User 1456810112 clicked 'Погоджуюся', is_registered: False
+[2025-07-10 15:59:06,975] [INFO]: User 1456810112 clicked 'Зареєструватися', is_registered: False
+[2025-07-10 15:59:07,132] [INFO]: Set state waiting_for_name for user 1456810112
+[2025-07-10 15:59:09,641] [INFO]: Processing name for user 1456810112: 'артем'
+[2025-07-10 15:59:09,646] [INFO]: Successfully added user 1456810112 to database
+[2025-07-10 15:59:09,719] [INFO]: Користувач 1456810112 зареєстрований з ім'ям артем.
+[2025-07-10 15:59:15,179] [INFO]: User 1456810112 clicked FAQ
+[2025-07-10 15:59:17,029] [INFO]: User 7646428316 clicked FAQ
+[2025-07-10 15:59:18,719] [INFO]: User 7646428316 clicked FAQ
+[2025-07-10 15:59:23,477] [INFO]: User 7646428316 clicked FAQ
+[2025-07-10 15:59:40,114] [INFO]: User 1456810112 sent /start command
+[2025-07-10 15:59:41,382] [INFO]: User 1456810112 clicked 'Погоджуюся', is_registered: True
+[2025-07-10 15:59:51,264] [INFO]: User 1456810112 clicked FAQ
+[2025-07-10 16:00:18,574] [INFO]: User 1456810112 sent /start command
+[2025-07-10 16:00:19,828] [INFO]: User 1456810112 clicked 'Погоджуюся', is_registered: True
