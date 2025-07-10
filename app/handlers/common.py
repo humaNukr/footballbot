@@ -19,10 +19,10 @@ async def cmd_start(message: Message):
     )
 
 @router.message(F.text == "🚀 Погоджуюся")
-async def process_start_button(message: Message, is_registered: bool):
+async def process_start_button(message: Message, is_registered: bool, is_admin: bool):
     await message.answer(
         "Виберіть одну з опцій:",
-        reply_markup=get_main_panel(is_registered)
+        reply_markup=get_main_panel(is_registered, is_admin)
     )
 
 #FAQ LOGIC
@@ -77,3 +77,17 @@ async def faq_admin(callback: CallbackQuery):
 async def faq_back(callback: CallbackQuery):
     await show_faq_menu(callback.message)
     await callback.answer()
+
+#ADMIN LOGIC
+@router.message(F.text == "🔐 Адмін-панель")
+async def admin_panel_button(message: Message, is_admin: bool):
+    if not is_admin:
+        await message.answer("❌ У вас немає прав доступу до адмін-панелі 🖕")
+        return
+    
+    from app.keyboards.inline import admin_main_menu
+    await message.answer(
+        "🔐 <b>Адмін-панель</b>\n\n"
+        "Виберіть дію:",
+        reply_markup=admin_main_menu()
+    )

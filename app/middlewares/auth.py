@@ -14,9 +14,10 @@ class AuthMiddleware(BaseMiddleware):
     ) -> Any:
         telegram_id = event.from_user.id
 
-        result = await self.db.execute("SELECT 1 FROM users WHERE telegram_id = %s", (telegram_id,))
+        result = await self.db.execute("SELECT is_admin FROM users WHERE telegram_id = %s", (telegram_id,))
         user = await result.fetchone()
 
         data["is_registered"] = bool(user)
+        data["is_admin"] = bool(user and user[0]) if user else False
 
         return await handler(event, data)
