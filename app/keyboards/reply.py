@@ -14,10 +14,10 @@ def get_main_panel(is_registered: bool, is_admin: bool = False) -> ReplyKeyboard
         ]
     else:
         buttons = [
-            [KeyboardButton(text="📅 Розклад"), KeyboardButton(text="❓ FAQ")]
+            [KeyboardButton(text="📅 Розклад"), KeyboardButton(text="❓ FAQ")],
+            [KeyboardButton(text="💬 Залишити відгук")]
         ]
-        
-        # Додаємо кнопку адмін-панелі для адмінів
+
         if is_admin:
             buttons.append([KeyboardButton(text="🔐 Адмін-панель")])
 
@@ -25,5 +25,6 @@ def get_main_panel(is_registered: bool, is_admin: bool = False) -> ReplyKeyboard
         keyboard=buttons,
         resize_keyboard=True
     )
+
 
 

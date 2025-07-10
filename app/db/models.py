@@ -31,9 +31,15 @@ async def get_users_count(db: Database):
 
 async def get_user_by_id(db: Database, telegram_id):
     """Знайти користувача за telegram_id"""
-    query = "SELECT telegram_id, username, first_name, is_admin, created_at FROM users WHERE telegram_id = %s"
-    result = await db.execute(query, (telegram_id,))
-    return await result.fetchone()
+    try:
+        query = "SELECT telegram_id, username, first_name, is_admin FROM users WHERE telegram_id = %s"
+        result = await db.execute(query, (telegram_id,))
+        user = await result.fetchone()
+        print(f"[DEBUG] Found user: {user}")
+        return user
+    except Exception as e:
+        print(f"[ERROR] Error in get_user_by_id: {e}")
+        raise
 
 async def search_users(db: Database, search_term):
     """Пошук користувачів за ім'ям або username"""
@@ -63,23 +69,57 @@ async def get_admins(db: Database):
     result = await db.execute(query)
     return await result.fetchall()
 
+async def save_feedback(db: Database, user_id: int, feedback_text: str):
+    query_get_user = """
+                     SELECT first_name, username FROM users WHERE telegram_id = %s \
+                     """
+    async with db.pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(query_get_user, (user_id,))
+            user = await cur.fetchone()
+            if not user:
+                raise ValueError("Користувача не знайдено в базі.")
+            first_name, username = user
+
+
+    query_insert_feedback = """
+                            INSERT INTO feedback (user_id, first_name, username, feedback_text, created_at)
+                            VALUES (%s, %s, %s, %s, NOW()) \
+                            """
+    async with db.pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(query_insert_feedback, (user_id, first_name, username, feedback_text))
+
+
+
+async def log_broadcast(db: Database, text: str, success: int, failed: int):
+    query = """
+            INSERT INTO broadcasts (text, success_count, failed_count)
+            VALUES (%s, %s, %s) \
+            """
+    await db.execute(query, (text, success, failed))
+
 async def get_stats(db: Database):
-    """Отримати статистику боту"""
-    stats = {}
-    
-    # Загальна кількість користувачів
-    result = await db.execute("SELECT COUNT(*) FROM users")
-    row = await result.fetchone()
-    stats['total_users'] = row[0] if row else 0
-    
-    # Кількість адмінів
-    result = await db.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1")
-    row = await result.fetchone()
-    stats['total_admins'] = row[0] if row else 0
-    
-    # Користувачі за сьогодні
-    result = await db.execute("SELECT COUNT(*) FROM users WHERE DATE(created_at) = CURDATE()")
-    row = await result.fetchone()
-    stats['today_users'] = row[0] if row else 0
-    
-    return stats
+    async with db.pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute("SELECT COUNT(*) FROM users")
+            total_users = (await cur.fetchone())[0]
+
+            await cur.execute("SELECT COUNT(*) FROM users WHERE is_admin = TRUE")
+            total_admins = (await cur.fetchone())[0]
+
+            await cur.execute("""
+                              SELECT COUNT(*) FROM users
+                              WHERE DATE(created_at) = CURRENT_DATE()
+                              """)
+            today_users = (await cur.fetchone())[0]
+
+            await cur.execute("SELECT COUNT(*) FROM feedback")
+            total_feedbacks = (await cur.fetchone())[0]
+
+    return {
+        "total_users": total_users,
+        "total_admins": total_admins,
+        "today_users": today_users,
+        "feedbacks": total_feedbacks
+    }

@@ -42,3 +42,4 @@ class Database:
             async with conn.cursor() as cur:
                 await cur.execute(query, params or ())
                 return cur
+

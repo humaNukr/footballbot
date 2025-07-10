@@ -1,14 +1,18 @@
 from aiogram import Router, F
+from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
+
+from app.handlers.user import RegisterState
 from app.middlewares.admin_check import IsAdmin
 from app.keyboards.inline import admin_main_menu, admin_users_menu, admin_back, user_action_menu
 from app.db.models import (
     get_all_users, get_users_count, get_user_by_id, search_users,
     make_admin, remove_admin, get_admins, get_stats
 )
-from app.states.register import AdminStates
+from app.states.register import AdminStates, DeleteAdminState
 from app.db.database import Database
+from app.db.models import save_feedback
 
 router = Router()
 
@@ -63,7 +67,7 @@ async def admin_user_list_handler(callback: CallbackQuery, db: Database):
         telegram_id, username, first_name, is_admin, created_at = user
         admin_badge = " 👑" if is_admin else ""
         username_text = f"@{username}" if username else "—"
-        text += f"• <b>{first_name}</b>{admin_badge}\n"
+        text += f" <b>{first_name}</b>{admin_badge}\n"
         text += f"  ID: <code>{telegram_id}</code>\n"
         text += f"  Username: {username_text}\n\n"
     
@@ -100,7 +104,7 @@ async def process_user_search(message: Message, state: FSMContext, db: Database)
         telegram_id, username, first_name, is_admin, created_at = user
         admin_badge = " 👑" if is_admin else ""
         username_text = f"@{username}" if username else "—"
-        text += f"• <b>{first_name}</b>{admin_badge}\n"
+        text += f" <b>{first_name}</b>{admin_badge}\n"
         text += f"  ID: <code>{telegram_id}</code>\n"
         text += f"  Username: {username_text}\n\n"
     
@@ -120,44 +124,28 @@ async def admin_add_admin_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.message(AdminStates.waiting_for_admin_id)
 async def process_add_admin(message: Message, state: FSMContext, db: Database):
+    telegram_id = message.text.strip()
+
     try:
-        user_id = int(message.text.strip())
+        telegram_id = int(telegram_id)
+        user = await get_user_by_id(db, telegram_id)
+
+        if not user:
+            await message.answer("❌ Користувача з таким ID не знайдено!", reply_markup=admin_back())
+            await state.clear()
+            return
+
+        await make_admin(db, telegram_id)
+        await message.answer("✅ Адмін успішно доданий!", reply_markup=admin_back())
+
     except ValueError:
-        await message.answer(
-            "❌ Невірний формат ID. Введіть числовий Telegram ID:",
-            reply_markup=admin_back()
-        )
-        return
-    
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        await message.answer(
-            f"❌ Користувач з ID <code>{user_id}</code> не знайдений в базі даних",
-            reply_markup=admin_back()
-        )
-        await state.clear()
-        return
-    
-    telegram_id, username, first_name, is_admin, created_at = user
-    
-    if is_admin:
-        await message.answer(
-            f"⚠️ Користувач <b>{first_name}</b> (<code>{user_id}</code>) вже є адміном",
-            reply_markup=admin_back()
-        )
-        await state.clear()
-        return
-    
-    await make_admin(db, user_id)
-    await message.answer(
-        f"✅ Користувач <b>{first_name}</b> (<code>{user_id}</code>) тепер адмін!",
-        reply_markup=admin_back()
-    )
+        await message.answer("❌ ID повинен бути числом!", reply_markup=admin_back())
+
     await state.clear()
 
 # Видалити адміна
 @router.callback_query(F.data == "admin_remove_admin")
-async def admin_remove_admin_handler(callback: CallbackQuery, db: Database):
+async def admin_remove_admin_handler(callback: CallbackQuery, db: Database, state: FSMContext):
     admins = await get_admins(db)
     
     if len(admins) <= 1:
@@ -173,7 +161,7 @@ async def admin_remove_admin_handler(callback: CallbackQuery, db: Database):
     for admin in admins:
         telegram_id, username, first_name = admin
         username_text = f"@{username}" if username else "—"
-        text += f"• <b>{first_name}</b>\n"
+        text += f" <b>{first_name}</b>\n"
         text += f"  ID: <code>{telegram_id}</code>\n"
         text += f"  Username: {username_text}\n\n"
     
@@ -181,23 +169,46 @@ async def admin_remove_admin_handler(callback: CallbackQuery, db: Database):
     
     await callback.message.edit_text(text, reply_markup=admin_back())
     await callback.answer()
-    
-    # Встановлюємо стан для очікування ID
-    state = callback.message.bot.get("state_manager")
+    await state.set_state(DeleteAdminState.waiting_for_id)
 
-# Статистика
-@router.callback_query(F.data == "admin_stats")
-async def admin_stats_handler(callback: CallbackQuery, db: Database):
+
+
+@router.message(DeleteAdminState.waiting_for_id)
+async def  delete_admin(message: Message,state: FSMContext, db : Database):
+    telegram_id = message.text.strip()
+
+    try:
+        telegram_id = int(telegram_id)
+        user = await get_user_by_id(db, telegram_id)
+
+        if not user:
+            await message.answer("❌ Користувача з таким ID не знайдено!", reply_markup=admin_back())
+            await state.clear()
+            return
+
+        await remove_admin(db, telegram_id)
+        await message.answer("✅ Адмін успішно видалений!", reply_markup=admin_back())
+
+    except ValueError:
+        await message.answer("❌ ID повинен бути числом!", reply_markup=admin_back())
+
+    await state.clear()
+
+
+@router.message(F.text == "📊 Статистика", IsAdmin())
+async def admin_stats_handler(message: Message, db: Database):
     stats = await get_stats(db)
-    
-    text = f"""📊 <b>Статистика боту</b>
 
-👥 Всього користувачів: <b>{stats['total_users']}</b>
-👑 Адмінів: <b>{stats['total_admins']}</b>
-📅 Нових за сьогодні: <b>{stats['today_users']}</b>"""
-    
-    await callback.message.edit_text(text, reply_markup=admin_back())
-    await callback.answer()
+    text = (
+        "<b>📊 Статистика </b>\n\n"
+        f"👤 Загальна кількість користувачів: <b>{stats['total_users']}</b>\n"
+        f"🛡️ Адміністраторів: <b>{stats['total_admins']}</b>\n"
+        f"📅 Нових сьогодні: <b>{stats['today_users']}</b>\n"
+        f"💬 Кількість відгуків: <b>{stats['feedbacks']}</b>"
+    )
+
+    await message.answer(text, reply_markup=admin_back())
+
 
 # Розсилка
 @router.callback_query(F.data == "admin_broadcast")
@@ -213,28 +224,34 @@ async def admin_broadcast_handler(callback: CallbackQuery, state: FSMContext):
 @router.message(AdminStates.waiting_for_broadcast_message)
 async def process_broadcast(message: Message, state: FSMContext, db: Database):
     broadcast_text = message.text
-    users = await get_all_users(db, limit=1000)  # Отримуємо всіх користувачів
-    
+    users = await get_all_users(db, limit=10000)
+
+    if not users:
+        await message.answer("❌ Немає користувачів для розсилки.", reply_markup=admin_back())
+        await state.clear()
+        return
+
     success_count = 0
     failed_count = 0
-    
-    # Надсилаємо повідомлення кожному користувачу
+
     for user in users:
         telegram_id = user[0]
         try:
             await message.bot.send_message(telegram_id, broadcast_text)
             success_count += 1
-        except Exception:
+        except Exception as e:
+            print(f"[ERROR] Failed to send message to {telegram_id}: {e}")
             failed_count += 1
-    
+
     result_text = f"""📢 <b>Розсилка завершена!</b>
 
 ✅ Успішно надіслано: <b>{success_count}</b>
 ❌ Помилок: <b>{failed_count}</b>
 📊 Всього спроб: <b>{success_count + failed_count}</b>"""
-    
+
     await message.answer(result_text, reply_markup=admin_main_menu())
     await state.clear()
+
 
 # Налаштування
 @router.callback_query(F.data == "admin_settings")

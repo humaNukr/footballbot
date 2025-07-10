@@ -37,5 +37,4 @@ async def process_name(message: Message, state: FSMContext, db: Database):
     )
 
     await message.answer(f"Дякую, {name}! Ви зареєстровані ✅", reply_markup=get_main_panel(is_registered=True, is_admin=False))
-    logger.info(f"Користувач {telegram_id} зареєстрований з ім'ям {name}.")
     await state.clear()

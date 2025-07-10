@@ -1,10 +1,19 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 def back_to_menu():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="🔙 Назад до FAQ", callback_data="faq_back")]
+        ]
+    )
+
+def faq_main_menu():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🤖 Про бота", callback_data="faq_about")],
+            [InlineKeyboardButton(text="📅 Матчі", callback_data="faq_matches")],
+            [InlineKeyboardButton(text="🛠️ Зв'язок з адміном", callback_data="faq_admin")]
         ]
     )
 
@@ -44,3 +53,4 @@ def user_action_menu(user_id):
             [InlineKeyboardButton(text="🔙 Назад", callback_data="admin_user_list")]
         ]
     )
+
