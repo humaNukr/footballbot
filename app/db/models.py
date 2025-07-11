@@ -97,12 +97,12 @@ async def save_feedback(db: Database, user_id: int, feedback_text: str):
 
 
 
-async def log_broadcast(db: Database):
+async def log_broadcast(db: Database, message_text: str):
     query = """
-            INSERT INTO broadcasts (id, message, sent_at)
-            VALUES (%s, %s, NOW()) \
+            INSERT INTO broadcasts (message, sent_at)
+            VALUES (%s, NOW()) \
             """
-    await db.execute(query)
+    await db.execute(query, (message_text,))
 
 async def get_stats(db: Database):
     async with db.pool.acquire() as conn:

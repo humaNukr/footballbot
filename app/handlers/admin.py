@@ -8,7 +8,7 @@ from app.middlewares.admin_check import IsAdmin
 from app.keyboards.inline import admin_main_menu, admin_users_menu, admin_back, user_action_menu
 from app.db.models import (
     get_all_users, get_users_count, get_user_by_id, search_users,
-    make_admin, remove_admin, get_admins, get_stats
+    make_admin, remove_admin, get_admins, get_stats, log_broadcast
 )
 from app.states.register import AdminStates
 from app.db.database import Database
@@ -245,6 +245,8 @@ async def process_broadcast(message: Message, state: FSMContext, db: Database):
         except Exception as e:
             print(f"[ERROR] Failed to send message to {telegram_id}: {e}")
             failed_count += 1
+
+    await log_broadcast(db, broadcast_text)
 
     result_text = f"""📢 <b>Розсилка завершена!</b>
     
