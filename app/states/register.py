@@ -9,5 +9,3 @@ class AdminStates(StatesGroup):
 class FeedbackStates(StatesGroup):
     waiting_for_text = State()
 
-class DeleteAdminState(StatesGroup):
-    waiting_for_id = State()

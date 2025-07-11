@@ -11,15 +11,14 @@ async def add_user(db: Database, telegram_id, username=None, first_name=None, la
         username, first_name
     ))
 
-async def get_all_users(db: Database, limit=10, offset=0):
+async def get_all_users(db: Database):
     """Отримати список всіх користувачів"""
     query = """
-            SELECT telegram_id, username, first_name, is_admin, created_at
+            SELECT telegram_id, username, first_name, is_admin, registered_at
             FROM users 
-            ORDER BY created_at DESC 
-            LIMIT %s OFFSET %s
+            ORDER BY registered_at DESC 
             """
-    result = await db.execute(query, (limit, offset))
+    result = await db.execute(query)
     return await result.fetchall()
 
 async def get_users_count(db: Database):
@@ -44,14 +43,20 @@ async def get_user_by_id(db: Database, telegram_id):
 async def search_users(db: Database, search_term):
     """Пошук користувачів за ім'ям або username"""
     query = """
-            SELECT telegram_id, username, first_name, is_admin, created_at
-            FROM users 
+            SELECT telegram_id, username, first_name, is_admin, registered_at
+            FROM users
             WHERE first_name LIKE %s OR username LIKE %s
-            LIMIT 20
+                LIMIT 20
             """
-    search_pattern = f"%{search_term}%"
-    result = await db.execute(query, (search_pattern, search_pattern))
-    return await result.fetchall()
+    try:
+        search_pattern = f"%{search_term}%"
+        result = await db.execute(query, (search_pattern, search_pattern))
+        users = await result.fetchall()
+        print(f"[DEBUG] Found users: {users}")
+        return users
+    except Exception as e:
+        print(f"[ERROR] Error in search_users: {e}")
+        raise
 
 async def make_admin(db: Database, telegram_id):
     """Зробити користувача адміном"""
@@ -92,12 +97,12 @@ async def save_feedback(db: Database, user_id: int, feedback_text: str):
 
 
 
-async def log_broadcast(db: Database, text: str, success: int, failed: int):
+async def log_broadcast(db: Database):
     query = """
-            INSERT INTO broadcasts (text, success_count, failed_count)
-            VALUES (%s, %s, %s) \
+            INSERT INTO broadcasts (id, message, sent_at)
+            VALUES (%s, %s, NOW()) \
             """
-    await db.execute(query, (text, success, failed))
+    await db.execute(query)
 
 async def get_stats(db: Database):
     async with db.pool.acquire() as conn:
@@ -110,7 +115,7 @@ async def get_stats(db: Database):
 
             await cur.execute("""
                               SELECT COUNT(*) FROM users
-                              WHERE DATE(created_at) = CURRENT_DATE()
+                              WHERE DATE(registered_at) = CURRENT_DATE()
                               """)
             today_users = (await cur.fetchone())[0]
 

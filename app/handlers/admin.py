@@ -10,7 +10,7 @@ from app.db.models import (
     get_all_users, get_users_count, get_user_by_id, search_users,
     make_admin, remove_admin, get_admins, get_stats
 )
-from app.states.register import AdminStates, DeleteAdminState
+from app.states.register import AdminStates
 from app.db.database import Database
 from app.db.models import save_feedback
 
@@ -50,7 +50,7 @@ async def admin_users_handler(callback: CallbackQuery):
 # Список користувачів
 @router.callback_query(F.data == "admin_user_list")
 async def admin_user_list_handler(callback: CallbackQuery, db: Database):
-    users = await get_all_users(db, limit=10)
+    users = await get_all_users(db)
     total_count = await get_users_count(db)
     
     if not users:
@@ -61,13 +61,13 @@ async def admin_user_list_handler(callback: CallbackQuery, db: Database):
         await callback.answer()
         return
     
-    text = f"📋 <b>Список користувачів</b> (показано 10 з {total_count})\n\n"
+    text = f"📋 <b>Список користувачів</b>\n\n"
     
     for user in users:
-        telegram_id, username, first_name, is_admin, created_at = user
+        telegram_id, username, first_name, is_admin, registered_at = user
         admin_badge = " 👑" if is_admin else ""
         username_text = f"@{username}" if username else "—"
-        text += f" <b>{first_name}</b>{admin_badge}\n"
+        text += f"  Name: <b>{first_name}</b>{admin_badge}\n"
         text += f"  ID: <code>{telegram_id}</code>\n"
         text += f"  Username: {username_text}\n\n"
     
@@ -101,10 +101,10 @@ async def process_user_search(message: Message, state: FSMContext, db: Database)
     text = f"🔍 <b>Результати пошуку:</b> '{search_term}'\n\n"
     
     for user in users:
-        telegram_id, username, first_name, is_admin, created_at = user
+        telegram_id, username, first_name, is_admin, registered_at = user
         admin_badge = " 👑" if is_admin else ""
         username_text = f"@{username}" if username else "—"
-        text += f" <b>{first_name}</b>{admin_badge}\n"
+        text += f"  Name: <b>{first_name}</b>{admin_badge}\n"
         text += f"  ID: <code>{telegram_id}</code>\n"
         text += f"  Username: {username_text}\n\n"
     
@@ -169,11 +169,11 @@ async def admin_remove_admin_handler(callback: CallbackQuery, db: Database, stat
     
     await callback.message.edit_text(text, reply_markup=admin_back())
     await callback.answer()
-    await state.set_state(DeleteAdminState.waiting_for_id)
+    await state.set_state(AdminStates.waiting_for_remove_admin_id)
 
 
 
-@router.message(DeleteAdminState.waiting_for_id)
+@router.message(AdminStates.waiting_for_remove_admin_id)
 async def  delete_admin(message: Message,state: FSMContext, db : Database):
     telegram_id = message.text.strip()
 
@@ -195,8 +195,8 @@ async def  delete_admin(message: Message,state: FSMContext, db : Database):
     await state.clear()
 
 
-@router.message(F.text == "📊 Статистика", IsAdmin())
-async def admin_stats_handler(message: Message, db: Database):
+@router.callback_query(F.data == "admin_stats", IsAdmin())
+async def admin_stats(callback: CallbackQuery, db: Database):
     stats = await get_stats(db)
 
     text = (
@@ -207,7 +207,8 @@ async def admin_stats_handler(message: Message, db: Database):
         f"💬 Кількість відгуків: <b>{stats['feedbacks']}</b>"
     )
 
-    await message.answer(text, reply_markup=admin_back())
+    await callback.message.edit_text(text, reply_markup=admin_back())
+    await callback.answer()
 
 
 # Розсилка
@@ -224,7 +225,9 @@ async def admin_broadcast_handler(callback: CallbackQuery, state: FSMContext):
 @router.message(AdminStates.waiting_for_broadcast_message)
 async def process_broadcast(message: Message, state: FSMContext, db: Database):
     broadcast_text = message.text
-    users = await get_all_users(db, limit=10000)
+    users = await get_all_users(db)
+
+    non_admin_users = [user for user in users if not user[3]]
 
     if not users:
         await message.answer("❌ Немає користувачів для розсилки.", reply_markup=admin_back())
@@ -234,7 +237,7 @@ async def process_broadcast(message: Message, state: FSMContext, db: Database):
     success_count = 0
     failed_count = 0
 
-    for user in users:
+    for user in non_admin_users:
         telegram_id = user[0]
         try:
             await message.bot.send_message(telegram_id, broadcast_text)
@@ -244,10 +247,8 @@ async def process_broadcast(message: Message, state: FSMContext, db: Database):
             failed_count += 1
 
     result_text = f"""📢 <b>Розсилка завершена!</b>
-
-✅ Успішно надіслано: <b>{success_count}</b>
-❌ Помилок: <b>{failed_count}</b>
-📊 Всього спроб: <b>{success_count + failed_count}</b>"""
+    
+✅ Успішно надіслано:  <b>{success_count}</b>"""
 
     await message.answer(result_text, reply_markup=admin_main_menu())
     await state.clear()
