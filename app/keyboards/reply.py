@@ -14,8 +14,8 @@ def get_main_panel(is_registered: bool, is_admin: bool = False) -> ReplyKeyboard
         ]
     else:
         buttons = [
-            [KeyboardButton(text="📅 Розклад"), KeyboardButton(text="❓ FAQ")],
-            [KeyboardButton(text="💬 Залишити відгук")]
+            [KeyboardButton(text="🔥 Наступний матч!"), KeyboardButton(text="📅 Розклад"), KeyboardButton(text="📋 Мої матчі") ],
+            [KeyboardButton(text="💬 Залишити відгук"), KeyboardButton(text="❓ FAQ")]
         ]
 
         if is_admin:

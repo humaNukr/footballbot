@@ -87,22 +87,36 @@ async def save_feedback(db: Database, user_id: int, feedback_text: str):
             first_name, username = user
 
 
+    from datetime import datetime
+    import pytz
+    
+    # Київський часовий пояс
+    kyiv_tz = pytz.timezone('Europe/Kiev')
+    current_time = datetime.now(kyiv_tz)
+    
     query_insert_feedback = """
                             INSERT INTO feedback (user_id, first_name, username, feedback_text, created_at)
-                            VALUES (%s, %s, %s, %s, NOW()) \
+                            VALUES (%s, %s, %s, %s, %s) \
                             """
     async with db.pool.acquire() as conn:
         async with conn.cursor() as cur:
-            await cur.execute(query_insert_feedback, (user_id, first_name, username, feedback_text))
+            await cur.execute(query_insert_feedback, (user_id, first_name, username, feedback_text, current_time))
 
 
 
 async def log_broadcast(db: Database, message_text: str):
+    from datetime import datetime
+    import pytz
+    
+    # Київський часовий пояс
+    kyiv_tz = pytz.timezone('Europe/Kiev')
+    current_time = datetime.now(kyiv_tz)
+    
     query = """
             INSERT INTO broadcasts (message, sent_at)
-            VALUES (%s, NOW()) \
+            VALUES (%s, %s) \
             """
-    await db.execute(query, (message_text,))
+    await db.execute(query, (message_text, current_time))
 
 async def get_stats(db: Database):
     async with db.pool.acquire() as conn:
@@ -145,3 +159,4 @@ async def add_schedule(db: Database, telegram_id: int, date_: str, time_: str, m
             VALUES (%s, %s, %s, %s, %s, %s) \
             """
     await db.execute(query, (telegram_id, username, first_name, date_, time_, message_))
+

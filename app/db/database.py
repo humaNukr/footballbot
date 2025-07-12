@@ -22,7 +22,8 @@ class Database:
                     user=DB_USER,
                     password=DB_PASS,
                     db=DB_NAME,
-                    autocommit=True
+                    autocommit=True,
+                    init_command="SET time_zone = 'Europe/Kiev'"  # Київський час з автоматичним переходом на літній час
                 )
                 print("✅ Connected to DB!")
                 return
@@ -48,4 +49,11 @@ class Database:
             async with conn.cursor() as cur:
                 await cur.execute(query, params or ())
                 result = await cur.fetchall()
+                return result
+
+    async def fetchone(self, query, params=None):
+        async with self.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(query, params or ())
+                result = await cur.fetchone()
                 return result

@@ -12,3 +12,5 @@ class AdminStates(StatesGroup):
 class FeedbackStates(StatesGroup):
     waiting_for_text = State()
 
+class GameStates(StatesGroup):
+    waiting_for_decline_reason = State()

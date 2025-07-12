@@ -261,7 +261,9 @@ async def process_broadcast(message: Message, state: FSMContext, db: Database):
 
 def create_calendar(year: int, month: int) -> InlineKeyboardMarkup:
     """Створює календар для вибору дати"""
-    today = datetime.now()
+    import pytz
+    kyiv_tz = pytz.timezone('Europe/Kiev')
+    today = datetime.now(kyiv_tz)
     
     # Назви місяців українською
     months = [
@@ -343,7 +345,9 @@ def create_calendar(year: int, month: int) -> InlineKeyboardMarkup:
 
 @router.callback_query(F.data == "admin_plan_game")
 async def admin_game_handler(callback: CallbackQuery, state: FSMContext):
-    today = datetime.now()
+    import pytz
+    kyiv_tz = pytz.timezone('Europe/Kiev')
+    today = datetime.now(kyiv_tz)
     await callback.message.edit_text(
         "📅 <b>Запланувати гру</b>\n\n"
         "Виберіть дату гри:",
@@ -449,3 +453,26 @@ async def admin_settings_handler(callback: CallbackQuery):
         reply_markup=admin_back()
     )
     await callback.answer()
+
+@router.callback_query(F.data == "admin_feedbacks", IsAdmin())
+async def view_feedbacks(callback: CallbackQuery, db: Database):
+    query = """
+            SELECT first_name, username, feedback_text, created_at
+            FROM feedback
+            ORDER BY created_at DESC
+            """
+    feedbacks = await db.fetchall(query)
+
+    if not feedbacks:
+        await callback.message.answer("📭 Відгуків ще немає.")
+        return
+
+    text = "<b>💬 Останні відгуки користувачів:</b>\n\n"
+    for first_name, username, fb_text, created_at in feedbacks:
+        text += (
+            f"👤 <b>{first_name}</b> (@{username})\n"
+            f"🕒 {created_at.strftime('%Y-%m-%d %H:%M')}\n"
+            f"💬 {fb_text}\n\n"
+        )
+
+    await callback.message.answer(text, reply_markup=admin_back())
