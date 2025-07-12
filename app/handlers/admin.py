@@ -1,6 +1,9 @@
+from datetime import time, datetime, timedelta
+import calendar
+
 from aiogram import Router, F
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 
 from app.handlers.user import RegisterState
@@ -8,11 +11,10 @@ from app.middlewares.admin_check import IsAdmin
 from app.keyboards.inline import admin_main_menu, admin_users_menu, admin_back, user_action_menu
 from app.db.models import (
     get_all_users, get_users_count, get_user_by_id, search_users,
-    make_admin, remove_admin, get_admins, get_stats, log_broadcast
+    make_admin, remove_admin, get_admins, get_stats, log_broadcast, add_schedule
 )
 from app.states.register import AdminStates
 from app.db.database import Database
-from app.db.models import save_feedback
 
 router = Router()
 
@@ -254,6 +256,184 @@ async def process_broadcast(message: Message, state: FSMContext, db: Database):
 
     await message.answer(result_text, reply_markup=admin_main_menu())
     await state.clear()
+
+
+def create_calendar(year: int, month: int) -> InlineKeyboardMarkup:
+    """Створює календар для вибору дати"""
+    today = datetime.now()
+    
+    # Назви місяців українською
+    months = [
+        "Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
+        "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"
+    ]
+    
+    # Створюємо календар
+    keyboard = []
+    
+    # Заголовок з місяцем та роком
+    keyboard.append([
+        InlineKeyboardButton(
+            text=f"{months[month-1]} {year}", 
+            callback_data="ignore"
+        )
+    ])
+    
+    # Дні тижня
+    keyboard.append([
+        InlineKeyboardButton(text="Пн", callback_data="ignore"),
+        InlineKeyboardButton(text="Вт", callback_data="ignore"),
+        InlineKeyboardButton(text="Ср", callback_data="ignore"),
+        InlineKeyboardButton(text="Чт", callback_data="ignore"),
+        InlineKeyboardButton(text="Пт", callback_data="ignore"),
+        InlineKeyboardButton(text="Сб", callback_data="ignore"),
+        InlineKeyboardButton(text="Нд", callback_data="ignore"),
+    ])
+    
+    # Отримуємо календар для місяця
+    month_calendar = calendar.monthcalendar(year, month)
+    
+    for week in month_calendar:
+        row = []
+        for day in week:
+            if day == 0:
+                row.append(InlineKeyboardButton(text=" ", callback_data="ignore"))
+            else:
+                # Перевіряємо, чи дата не в минулому
+                date_obj = datetime(year, month, day)
+                if date_obj < today.replace(hour=0, minute=0, second=0, microsecond=0):
+                    row.append(InlineKeyboardButton(text=" ", callback_data="ignore"))
+                else:
+                    row.append(InlineKeyboardButton(
+                        text=str(day), 
+                        callback_data=f"calendar_day_{year}_{month}_{day}"
+                    ))
+        keyboard.append(row)
+    
+    # Кнопки навігації
+    prev_month = month - 1
+    prev_year = year
+    if prev_month == 0:
+        prev_month = 12
+        prev_year -= 1
+        
+    next_month = month + 1
+    next_year = year
+    if next_month == 13:
+        next_month = 1
+        next_year += 1
+    
+    keyboard.append([
+        InlineKeyboardButton(
+            text="◀️", 
+            callback_data=f"calendar_prev_{prev_year}_{prev_month}"
+        ),
+        InlineKeyboardButton(
+            text="🔙 Назад", 
+            callback_data="admin_back"
+        ),
+        InlineKeyboardButton(
+            text="▶️", 
+            callback_data=f"calendar_next_{next_year}_{next_month}"
+        ),
+    ])
+    
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+@router.callback_query(F.data == "admin_plan_game")
+async def admin_game_handler(callback: CallbackQuery, state: FSMContext):
+    today = datetime.now()
+    await callback.message.edit_text(
+        "📅 <b>Запланувати гру</b>\n\n"
+        "Виберіть дату гри:",
+        reply_markup=create_calendar(today.year, today.month)
+    )
+    await state.set_state(AdminStates.waiting_for_game_date)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("calendar_day_"))
+async def process_calendar_day(callback: CallbackQuery, state: FSMContext):
+    """Обробка вибору дня"""
+    _, _, year, month, day = callback.data.split("_")
+    date_obj = datetime(int(year), int(month), int(day))
+    
+    await state.update_data(game_date=date_obj.strftime("%Y-%m-%d"))
+    await callback.message.edit_text(
+        f"✅ Вибрана дата: <b>{date_obj.strftime('%d.%m.%Y')}</b>\n\n"
+        f"Введіть час гри у форматі ГГ:ХХ (наприклад, 18:30):",
+        reply_markup=admin_back()
+    )
+    await state.set_state(AdminStates.waiting_for_game_time)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("calendar_prev_"))
+async def process_calendar_prev(callback: CallbackQuery):
+    """Перехід до попереднього місяця"""
+    _, _, year, month = callback.data.split("_")
+    await callback.message.edit_reply_markup(
+        reply_markup=create_calendar(int(year), int(month))
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("calendar_next_"))
+async def process_calendar_next(callback: CallbackQuery):
+    """Перехід до наступного місяця"""
+    _, _, year, month = callback.data.split("_")
+    await callback.message.edit_reply_markup(
+        reply_markup=create_calendar(int(year), int(month))
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "ignore")
+async def ignore_callback(callback: CallbackQuery):
+    """Ігноруємо неактивні кнопки"""
+    await callback.answer()
+
+@router.message(AdminStates.waiting_for_game_time)
+async def process_game_time(message: Message, state: FSMContext, db: Database):
+    time = message.text.strip()
+
+    try:
+        hour, minute = map(int, time.split(':'))
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError
+
+        state_data = await state.get_data()
+        game_date = state_data['game_date']
+        # Store time in state
+        await state.update_data(game_time=f"{hour:02d}:{minute:02d}")
+
+        await message.answer(
+            f"✅ Гру заплановано на <b>{game_date}</b> о <b>{time}</b>\n"
+            f"Введіть додаткову інформацію для користувачів:",
+            reply_markup=admin_back()
+        )
+        await state.set_state(AdminStates.waiting_for_additional_info)
+
+    except ValueError:
+        await message.answer(
+            "❌ Некоректний формат часу. Введіть час у форматі ГГ:ХХ (наприклад, 18:30):",
+            reply_markup=admin_back()
+        )
+
+@router.message(AdminStates.waiting_for_additional_info)
+async def process_additional_info(message: Message, state: FSMContext, db: Database):
+    additional_info = message.text.strip()
+    state_data = await state.get_data()
+    game_date = state_data['game_date']
+    game_time = state_data['game_time']
+    user_id = message.from_user.id
+
+    await add_schedule(db, user_id, game_date, game_time, additional_info)
+
+    await message.answer(
+        "✅ Гру успішно заплановано!\n"
+        f"Дата та час: {game_date} {game_time}\n"
+        f"Додаткова інформація: {additional_info}",
+        reply_markup=admin_main_menu()
+    )
+    await state.clear()
+
 
 
 # Налаштування

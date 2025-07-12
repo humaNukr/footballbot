@@ -128,3 +128,20 @@ async def get_stats(db: Database):
         "today_users": today_users,
         "feedbacks": total_feedbacks
     }
+
+async def add_schedule(db: Database, telegram_id: int, date_: str, time_: str, message_: str):
+    query_get_user = """
+                     SELECT first_name, username FROM users WHERE telegram_id = %s \
+                     """
+    async with db.pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(query_get_user, (telegram_id,))
+            user = await cur.fetchone()
+            if not user:
+                raise ValueError("Користувача не знайдено в базі.")
+            first_name, username = user
+    query = """
+            INSERT INTO schedule (telegram_id, username, first_name, date, time, message)
+            VALUES (%s, %s, %s, %s, %s, %s) \
+            """
+    await db.execute(query, (telegram_id, username, first_name, date_, time_, message_))

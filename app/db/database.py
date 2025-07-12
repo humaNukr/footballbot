@@ -43,3 +43,9 @@ class Database:
                 await cur.execute(query, params or ())
                 return cur
 
+    async def fetchall(self, query, params=None):
+        async with self.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(query, params or ())
+                result = await cur.fetchall()
+                return result
