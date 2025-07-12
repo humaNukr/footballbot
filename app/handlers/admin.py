@@ -13,6 +13,7 @@ from app.db.models import (
     get_all_users, get_users_count, get_user_by_id, search_users,
     make_admin, remove_admin, get_admins, get_stats, log_broadcast, add_schedule
 )
+from app.services.notify import push_calendar_update
 from app.states.register import AdminStates
 from app.db.database import Database
 
@@ -426,12 +427,15 @@ async def process_additional_info(message: Message, state: FSMContext, db: Datab
 
     await add_schedule(db, user_id, game_date, game_time, additional_info)
 
+    await push_calendar_update(message, state, db)
+
     await message.answer(
         "✅ Гру успішно заплановано!\n"
         f"Дата та час: {game_date} {game_time}\n"
         f"Додаткова інформація: {additional_info}",
         reply_markup=admin_main_menu()
     )
+
     await state.clear()
 
 

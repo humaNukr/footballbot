@@ -114,19 +114,19 @@ async def process_feedback_text(message: Message, state: FSMContext, db: Databas
 @router.message(F.text == "📅 Розклад")
 async def show_schedule(message: Message, db: Database):
     query = """
-            SELECT date, time, message FROM schedule
-            WHERE telegram_id = %s
+            SELECT first_name, date, time, message FROM schedule
             ORDER BY date, time \
             """
-    result = await db.fetchall(query, (message.from_user.id,))
+    result = await db.fetchall(query)
 
     if not result:
-        await message.answer("📭 У вас ще немає запланованих матчів.")
+        await message.answer("📭 Розклад порожній.")
         return
 
-    text = "<b>📅 Ваш розклад матчів:</b>\n\n"
+    text = "<b>📅 Загальний розклад матчів:</b>\n\n"
     for row in result:
-        date, time_, msg = row
-        text += f"🗓 {date} 🕒 {time_}\n📌 {msg}\n\n"
+        first_name, date, time_, msg = row
+        text += f"👤 {first_name}\n🗓 {date} 🕒 {time_}\n📌 {msg}\n\n"
 
     await message.answer(text)
+
