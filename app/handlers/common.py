@@ -341,6 +341,60 @@ async def show_next_game(message: Message, db: Database):
     await message.answer(text, reply_markup=keyboard)
 
 
+@router.callback_query(F.data == "refresh_my_matches")
+async def refresh_my_matches(callback: CallbackQuery, db: Database):
+    query = """
+            SELECT s.date, s.time, s.message
+            FROM registrations r
+                     JOIN schedule s ON s.id = r.match_id
+            WHERE r.telegram_id = %s AND (r.message IS NULL OR r.message = '')
+            ORDER BY s.date, s.time \
+            """
+    matches = await db.fetchall(query, (callback.from_user.id,))
+
+    if not matches:
+        await callback.message.edit_text(
+            "📭 <b>Ви ще не записалися на жоден матч</b>\n\n"
+            "🔔 Перегляньте розклад та запишіться на майбутні ігри!\n\n"
+            "⚽ Готуйтеся до гри!"
+        )
+        await callback.answer("🔄 Оновлено!")
+        return
+
+    from datetime import datetime
+    
+    text = "📋 <b>ВАШІ ЗАПЛАНОВАНІ МАТЧІ</b>\n"
+    text += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    
+    for i, (date, time_, schedule_msg) in enumerate(matches, 1):
+        try:
+            date_obj = datetime.strptime(str(date), "%Y-%m-%d")
+            formatted_date = date_obj.strftime("%d.%m.%Y")
+            day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
+        except:
+            formatted_date = str(date)
+            day_name = ""
+        
+        # Перевіряємо повідомлення
+        if schedule_msg is None:
+            schedule_msg = "Без деталей"
+        
+        text += f"🎯 <b>МАТЧ #{i}</b>\n"
+        text += f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
+        text += f"🕐 <b>Час:</b> {time_}\n"
+        text += f"📋 <b>Деталі матчу:</b> {schedule_msg}\n\n"
+    
+    text += "⚡ <i>Побачимося на полі!</i> ⚡"
+
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔄 Оновити", callback_data="refresh_my_matches")]
+    ])
+
+    await callback.message.edit_text(text, reply_markup=keyboard)
+    await callback.answer("🔄 Оновлено!")
+
+
 @router.callback_query(F.data == "refresh_schedule")
 async def refresh_schedule(callback: CallbackQuery, db: Database):
     query = """
@@ -499,17 +553,47 @@ async def my_registrations(message: Message, db: Database):
             SELECT s.date, s.time, s.message
             FROM registrations r
                      JOIN schedule s ON s.id = r.match_id
-            WHERE r.telegram_id = %s
+            WHERE r.telegram_id = %s AND (r.message IS NULL OR r.message = '')
             ORDER BY s.date, s.time \
             """
     matches = await db.fetchall(query, (message.from_user.id,))
 
     if not matches:
-        await message.answer("📭 Ви ще не записалися на жоден матч.")
+        await message.answer(
+            "📭 <b>Ви ще не записалися на жоден матч</b>\n\n"
+            "🔔 Перегляньте розклад та запишіться на майбутні ігри!\n\n"
+            "⚽ Готуйтеся до гри!"
+        )
         return
 
-    text = "<b>📋 Ваші заплановані матчі:</b>\n\n"
-    for date, time_, msg in matches:
-        text += f"🗓 {date} 🕒 {time_}\n📌 {msg}\n\n"
+    from datetime import datetime
+    
+    text = "📋 <b>ВАШІ ЗАПЛАНОВАНІ МАТЧІ</b>\n"
+    text += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    
+    for i, (date, time_, schedule_msg) in enumerate(matches, 1):
+        try:
+            date_obj = datetime.strptime(str(date), "%Y-%m-%d")
+            formatted_date = date_obj.strftime("%d.%m.%Y")
+            day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
+        except:
+            formatted_date = str(date)
+            day_name = ""
+        
+        # Перевіряємо повідомлення
+        if schedule_msg is None:
+            schedule_msg = "Без деталей"
+        
+        text += f"🎯 <b>МАТЧ #{i}</b>\n"
+        text += f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
+        text += f"🕐 <b>Час:</b> {time_}\n"
+        text += f"📋 <b>Деталі матчу:</b> {schedule_msg}\n\n"
+    
+    text += "⚡ <i>Побачимося на полі!</i> ⚡"
 
-    await message.answer(text)
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔄 Оновити", callback_data="refresh_my_matches")]
+    ])
+
+    await message.answer(text, reply_markup=keyboard)
