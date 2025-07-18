@@ -124,7 +124,10 @@ async def process_feedback_text(message: Message, state: FSMContext, db: Databas
 
 
 @router.message(F.text == "📅 Розклад")
-async def show_schedule(message: Message, db: Database):
+async def show_schedule(message: Message, db: Database, is_admin: bool = False):
+    # Автоматично видаляємо старі матчі
+    await db.execute("DELETE FROM schedule WHERE date < CURRENT_DATE")
+
     query = """
             SELECT s.id, s.first_name, s.date, s.time, s.message
             FROM schedule s
@@ -171,17 +174,20 @@ async def show_schedule(message: Message, db: Database):
                 f"🔥 <i>Футбол - це життя!</i> 🔥"
             )
 
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [
-                        InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id}"),
-                        InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
-                    ],
-                    [
-                        InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
-                    ]
+            keyboard_buttons = [
+                [
+                    InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id}"),
+                    InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
+                ],
+                [
+                    InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
                 ]
-            )
+            ]
+            if is_admin:
+                keyboard_buttons.append([
+                    InlineKeyboardButton(text="🗑️ Видалити цей матч", callback_data=f"delete_match:{match_id}")
+                ])
+            keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
             await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
@@ -599,3 +605,12 @@ async def my_registrations(message: Message, db: Database):
     ])
 
     await message.answer(text, reply_markup=keyboard)
+
+
+# Обробник видалення матчу (тільки для адміна)
+@router.callback_query(F.data.startswith("delete_match:"))
+async def delete_match_callback(callback: CallbackQuery, db: Database):
+    match_id = int(callback.data.split(":")[1])
+    await db.execute("DELETE FROM schedule WHERE id = %s", (match_id,))
+    await callback.message.edit_text("🗑️ Матч видалено адміністратором.")
+    await callback.answer("Матч видалено!")
