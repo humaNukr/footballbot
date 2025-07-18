@@ -443,17 +443,6 @@ async def process_additional_info(message: Message, state: FSMContext, db: Datab
     await state.clear()
 
 
-
-# Налаштування
-@router.callback_query(F.data == "admin_settings")
-async def admin_settings_handler(callback: CallbackQuery):
-    await callback.message.edit_text(
-        "⚙️ <b>Налаштування</b>\n\n"
-        "Цей розділ в розробці...",
-        reply_markup=admin_back()
-    )
-    await callback.answer()
-
 @router.callback_query(F.data == "admin_feedbacks", IsAdmin())
 async def view_feedbacks(callback: CallbackQuery, db: Database):
     query = """

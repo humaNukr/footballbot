@@ -7,6 +7,7 @@ from aiogram.filters import CommandStart
 from app.keyboards.reply import start_keyboard, get_main_panel
 from app.db.database import Database
 from app.db.models import add_user
+from app.services.notify import push_users_db_update
 from app.utils.logger import logger
 
 router = Router()
@@ -17,10 +18,6 @@ class RegisterState(StatesGroup):
 
 @router.message(F.text == "Зареєструватися")
 async def register_user(message: Message, state: FSMContext, is_registered: bool):
-    if is_registered:
-        await message.answer("Ви вже зареєстровані ✅")
-        return
-
     await message.answer("Введіть ваше ім'я 📝:", reply_markup=ReplyKeyboardRemove())
     await state.set_state(RegisterState.waiting_for_name)
 
@@ -35,6 +32,8 @@ async def process_name(message: Message, state: FSMContext, db: Database):
         username=message.from_user.username,
         first_name=name,
     )
+
+    await push_users_db_update(message=message, state=state, db=db, telegram_id=telegram_id, username=message.from_user.username, first_name=name)
 
     await message.answer(f"Дякую, {name}! Ви зареєстровані ✅", reply_markup=get_main_panel(is_registered=True, is_admin=False))
     await state.clear()

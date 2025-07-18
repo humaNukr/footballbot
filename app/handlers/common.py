@@ -12,6 +12,7 @@ from app.keyboards.inline import back_to_menu
 from app.keyboards.reply import start_keyboard
 
 from app.keyboards.reply import get_main_panel
+from app.services.notify import push_feedback_update
 from app.states.register import FeedbackStates, GameStates
 
 router = Router()
@@ -113,6 +114,7 @@ async def process_feedback_text(message: Message, state: FSMContext, db: Databas
 
     try:
         await save_feedback(db, user_id, feedback_text)
+        await push_feedback_update(message, state, db)
         await message.answer("✅ Дякуємо за ваше повідомлення. Адмін прочитає це незабаром!")
     except Exception as e:
         await message.answer("❌ Помилка під час збереження відгуку.")

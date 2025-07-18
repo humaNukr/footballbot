@@ -24,8 +24,7 @@ def admin_main_menu():
             [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
             [InlineKeyboardButton(text="📢 Розсилка повідомлення", callback_data="admin_broadcast")],
             [InlineKeyboardButton(text="⚽ Запланувати новий матч", callback_data="admin_plan_game")],
-            [InlineKeyboardButton(text="💬 Відгуки", callback_data="admin_feedbacks")],
-            [InlineKeyboardButton(text="⚙️ Налаштування", callback_data="admin_settings")]
+            [InlineKeyboardButton(text="💬 Відгуки", callback_data="admin_feedbacks")]
         ]
     )
 
