@@ -43,8 +43,8 @@ class Database:
                     "command_timeout": 60
                 }
                 
-                # Для production (Render) додаємо SSL
-                if DATABASE_URL or os.getenv("RENDER"):
+                # Для production (Render/Railway) додаємо SSL
+                if DATABASE_URL or os.getenv("RENDER") or os.getenv("RAILWAY"):
                     connection_params["ssl"] = "require"
                 
                 self.pool = await asyncpg.create_pool(**connection_params)

@@ -16,13 +16,18 @@ docker-compose up --build -d
 docker-compose logs -f bot
 ```
 
-### Деплой на Render 
-Детальна інструкція: **[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)**
+### Деплой на хостинг 
 
-1. Створити GitHub репозиторій
-2. Створити PostgreSQL на render.com
-3. Створити Web Service на render.com
-4. Налаштувати змінні: `BOT_TOKEN`, `DATABASE_URL`, `RENDER=true`
+**🚄 Railway (рекомендовано - БЕЗКОШТОВНО):**
+- Детальна інструкція: **[RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)**
+- Background Worker включений в безкоштовний план
+- PostgreSQL безкоштовно
+- 500 годин/місяць
+
+**🔧 Render (обмежено):**
+- Детальна інструкція: **[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)**  
+- Background Worker тільки на платному плані
+- Потрібен workaround для безкоштовного
 
 ## 🛠️ Функції
 
@@ -35,7 +40,8 @@ docker-compose logs -f bot
 ## 📚 Документація
 
 - **[POSTGRES_SETUP.md](POSTGRES_SETUP.md)** - локальне налаштування PostgreSQL
-- **[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)** - деплой на хостинг
+- **[RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)** - 🚄 деплой на Railway (БЕЗКОШТОВНО)
+- **[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)** - 🔧 деплой на Render (обмежено)
 
 ## 🗄️ База даних
 
@@ -49,11 +55,15 @@ PostgreSQL з автоматичним створенням таблиць:
 
 ```bash
 BOT_TOKEN=your_telegram_bot_token
-DATABASE_URL=postgresql://user:pass@host:port/db  # для Render
+DATABASE_URL=postgresql://user:pass@host:port/db  # для Railway/Render
 # АБО для локального запуску:
 DB_HOST=localhost
 DB_PORT=5432  
 DB_USER=football
 DB_PASS=footballpass
 DB_NAME=football_db
+
+# Для production
+RAILWAY=true    # для Railway
+RENDER=true     # для Render
 ```
