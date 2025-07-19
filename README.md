@@ -41,6 +41,7 @@ docker-compose logs -f bot
 
 - **[POSTGRES_SETUP.md](POSTGRES_SETUP.md)** - локальне налаштування PostgreSQL
 - **[RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)** - 🚄 деплой на Railway (БЕЗКОШТОВНО)
+- **[DATABASE_MIGRATION.md](DATABASE_MIGRATION.md)** - 🗃️ міграція існуючої бази даних
 - **[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)** - 🔧 деплой на Render (обмежено)
 
 ## 🗄️ База даних
