@@ -5,6 +5,5 @@ from app.db.database import Database
 
 class IsAdmin(BaseFilter):
     async def __call__(self, message: Message, db: Database) -> bool:
-        result = await db.execute("SELECT is_admin FROM users WHERE telegram_id = %s", (message.from_user.id,))
-        user = await result.fetchone()
+        user = await db.fetchone("SELECT is_admin FROM users WHERE telegram_id = $1", (message.from_user.id,))
         return bool(user and user[0])
