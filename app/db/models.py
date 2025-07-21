@@ -1,6 +1,6 @@
 from app.db.database import Database
 import pytz
-from datetime import datetime
+from datetime import datetime, time
 
 async def add_user(db: Database, telegram_id, username=None, first_name=None, last_name=None):
     query = """
@@ -150,11 +150,14 @@ async def add_schedule(db: Database, telegram_id: int, date_: str, time_: str, m
     # Конвертуємо рядок дати в об'єкт дати
     date_obj = datetime.strptime(date_, "%Y-%m-%d").date()
     
+    # Конвертуємо рядок часу в об'єкт часу
+    time_obj = datetime.strptime(time_, "%H:%M").time()
+    
     query = """
             INSERT INTO schedule (first_name, date, time, message)
             VALUES ($1, $2, $3, $4)
             RETURNING id
             """
-    result = await db.fetchone(query, (first_name, date_obj, time_, message_))
+    result = await db.fetchone(query, (first_name, date_obj, time_obj, message_))
     return result[0] if result else None  # Повертаємо ID нового матчу
 
