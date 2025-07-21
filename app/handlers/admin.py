@@ -303,7 +303,7 @@ def create_calendar(year: int, month: int) -> InlineKeyboardMarkup:
                 row.append(InlineKeyboardButton(text=" ", callback_data="ignore"))
             else:
                 # Перевіряємо, чи дата не в минулому
-                date_obj = datetime(year, month, day)
+                date_obj = kyiv_tz.localize(datetime(year, month, day))
                 if date_obj < today.replace(hour=0, minute=0, second=0, microsecond=0):
                     row.append(InlineKeyboardButton(text=" ", callback_data="ignore"))
                 else:
@@ -454,7 +454,12 @@ async def view_feedbacks(callback: CallbackQuery, db: Database):
     feedbacks = await db.fetchall(query)
 
     if not feedbacks:
-        await callback.message.answer("📭 Відгуків ще немає.")
+        await callback.message.edit_text(
+            "📭 <b>Відгуків ще немає.</b>\n\n"
+            "Користувачі ще не залишили жодного відгуку.",
+            reply_markup=admin_back()
+        )
+        await callback.answer()
         return
 
     text = "<b>💬 Останні відгуки користувачів:</b>\n\n"
@@ -465,4 +470,5 @@ async def view_feedbacks(callback: CallbackQuery, db: Database):
             f"💬 {fb_text}\n\n"
         )
 
-    await callback.message.answer(text, reply_markup=admin_back())
+    await callback.message.edit_text(text, reply_markup=admin_back())
+    await callback.answer()

@@ -36,12 +36,14 @@ docker-compose logs -f bot
 - 📊 **Статистика** (адміни)
 - 💬 **Відгуки** користувачів
 - 🗓️ **Календар** для вибору дат
+- 🎨 **Динамічний UI** - оновлення без спаму повідомлень
 
 ## 📚 Документація
 
 - **[POSTGRES_SETUP.md](POSTGRES_SETUP.md)** - локальне налаштування PostgreSQL
 - **[RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)** - 🚄 деплой на Railway (БЕЗКОШТОВНО)
 - **[DATABASE_MIGRATION.md](DATABASE_MIGRATION.md)** - 🗃️ міграція існуючої бази даних
+- **[UI_IMPROVEMENTS.md](UI_IMPROVEMENTS.md)** - 🎨 покращення інтерфейсу користувача
 - **[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)** - 🔧 деплой на Render (обмежено)
 
 ## 🗄️ База даних

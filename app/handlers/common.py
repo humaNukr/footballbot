@@ -287,9 +287,11 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
         return
 
     text = f"👥 <b>Учасники матчу #{match_id}</b>\n\n"
-    for idx, (first_name, username,message) in enumerate(participants, start=1):
+    active_count = 0
+    for idx, (first_name, username, message) in enumerate(participants, start=1):
         if message is not None:
             continue
+        active_count += 1
         if first_name:
             first_name = first_name
         else:
@@ -299,10 +301,20 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
         else:
             username = "-"
         user_display = f"{first_name}, @{username}"
-        text += f"{idx}. {user_display}\n"
+        text += f"{active_count}. {user_display}\n"
 
-    await callback.message.answer(text, parse_mode="HTML")
+    if active_count == 0:
+        text += "😔 Активних учасників поки немає."
+    
+    # Додаємо кнопку "Назад"
+    from app.keyboards.inline import InlineKeyboardMarkup, InlineKeyboardButton
+    back_button = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_schedule")]
+    ])
+
+    await callback.message.edit_text(text, reply_markup=back_button)
     await callback.answer()
+
 
 
 @router.message(F.text == "🔥 Наступний матч!")
