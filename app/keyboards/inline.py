@@ -21,6 +21,7 @@ def admin_main_menu():
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="👥 Управління користувачами", callback_data="admin_users")],
+            [InlineKeyboardButton(text="📨 Зв'язок з користувачами", callback_data="admin_contacts")],
             [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
             [InlineKeyboardButton(text="📢 Розсилка повідомлення", callback_data="admin_broadcast")],
             [InlineKeyboardButton(text="⚽ Запланувати новий матч", callback_data="admin_plan_game")],

@@ -22,6 +22,7 @@ router = Router()
 router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
 
+
 @router.message(F.text == "/admin")
 async def admin_menu(message: Message):
     await message.answer(
@@ -29,6 +30,7 @@ async def admin_menu(message: Message):
         "Виберіть дію:",
         reply_markup=admin_main_menu()
     )
+
 
 # Головне меню адміна
 @router.callback_query(F.data == "admin_back")
@@ -40,6 +42,7 @@ async def admin_back_handler(callback: CallbackQuery):
     )
     await callback.answer()
 
+
 # Управління користувачами
 @router.callback_query(F.data == "admin_users")
 async def admin_users_handler(callback: CallbackQuery):
@@ -50,12 +53,13 @@ async def admin_users_handler(callback: CallbackQuery):
     )
     await callback.answer()
 
+
 # Список користувачів
 @router.callback_query(F.data == "admin_user_list")
 async def admin_user_list_handler(callback: CallbackQuery, db: Database):
     users = await get_all_users(db)
     total_count = await get_users_count(db)
-    
+
     if not users:
         await callback.message.edit_text(
             "📋 <b>Список користувачів порожній</b>",
@@ -63,9 +67,9 @@ async def admin_user_list_handler(callback: CallbackQuery, db: Database):
         )
         await callback.answer()
         return
-    
+
     text = f"📋 <b>Список користувачів</b>\n\n"
-    
+
     for user in users:
         telegram_id, username, first_name, is_admin, registered_at = user
         admin_badge = " 👑" if is_admin else ""
@@ -73,9 +77,10 @@ async def admin_user_list_handler(callback: CallbackQuery, db: Database):
         text += f"  Name: <b>{first_name}</b>{admin_badge}\n"
         text += f"  ID: <code>{telegram_id}</code>\n"
         text += f"  Username: {username_text}\n\n"
-    
+
     await callback.message.edit_text(text, reply_markup=admin_back())
     await callback.answer()
+
 
 # Пошук користувача
 @router.callback_query(F.data == "admin_user_search")
@@ -88,11 +93,12 @@ async def admin_user_search_handler(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AdminStates.waiting_for_user_search)
     await callback.answer()
 
+
 @router.message(AdminStates.waiting_for_user_search)
 async def process_user_search(message: Message, state: FSMContext, db: Database):
     search_term = message.text.strip()
     users = await search_users(db, search_term)
-    
+
     if not users:
         await message.answer(
             f"🔍 За запитом '<b>{search_term}</b>' нічого не знайдено",
@@ -100,9 +106,9 @@ async def process_user_search(message: Message, state: FSMContext, db: Database)
         )
         await state.clear()
         return
-    
+
     text = f"🔍 <b>Результати пошуку:</b> '{search_term}'\n\n"
-    
+
     for user in users:
         telegram_id, username, first_name, is_admin, registered_at = user
         admin_badge = " 👑" if is_admin else ""
@@ -110,9 +116,10 @@ async def process_user_search(message: Message, state: FSMContext, db: Database)
         text += f"  Name: <b>{first_name}</b>{admin_badge}\n"
         text += f"  ID: <code>{telegram_id}</code>\n"
         text += f"  Username: {username_text}\n\n"
-    
+
     await message.answer(text, reply_markup=admin_back())
     await state.clear()
+
 
 # Додати адміна
 @router.callback_query(F.data == "admin_add_admin")
@@ -124,6 +131,7 @@ async def admin_add_admin_handler(callback: CallbackQuery, state: FSMContext):
     )
     await state.set_state(AdminStates.waiting_for_admin_id)
     await callback.answer()
+
 
 @router.message(AdminStates.waiting_for_admin_id)
 async def process_add_admin(message: Message, state: FSMContext, db: Database):
@@ -146,11 +154,12 @@ async def process_add_admin(message: Message, state: FSMContext, db: Database):
 
     await state.clear()
 
+
 # Видалити адміна
 @router.callback_query(F.data == "admin_remove_admin")
 async def admin_remove_admin_handler(callback: CallbackQuery, db: Database, state: FSMContext):
     admins = await get_admins(db)
-    
+
     if len(admins) <= 1:
         await callback.message.edit_text(
             "⚠️ <b>Неможливо видалити адміна</b>\n\n"
@@ -159,7 +168,7 @@ async def admin_remove_admin_handler(callback: CallbackQuery, db: Database, stat
         )
         await callback.answer()
         return
-    
+
     text = "❌ <b>Список адмінів:</b>\n\n"
     for admin in admins:
         telegram_id, username, first_name = admin
@@ -167,17 +176,16 @@ async def admin_remove_admin_handler(callback: CallbackQuery, db: Database, stat
         text += f" <b>{first_name}</b>\n"
         text += f"  ID: <code>{telegram_id}</code>\n"
         text += f"  Username: {username_text}\n\n"
-    
+
     text += "Введіть ID адміна, якого хочете видалити:"
-    
+
     await callback.message.edit_text(text, reply_markup=admin_back())
     await callback.answer()
     await state.set_state(AdminStates.waiting_for_remove_admin_id)
 
 
-
 @router.message(AdminStates.waiting_for_remove_admin_id)
-async def  delete_admin(message: Message,state: FSMContext, db : Database):
+async def delete_admin(message: Message, state: FSMContext, db: Database):
     telegram_id = message.text.strip()
 
     try:
@@ -225,6 +233,7 @@ async def admin_broadcast_handler(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AdminStates.waiting_for_broadcast_message)
     await callback.answer()
 
+
 @router.message(AdminStates.waiting_for_broadcast_message)
 async def process_broadcast(message: Message, state: FSMContext, db: Database):
     broadcast_text = message.text
@@ -264,24 +273,24 @@ def create_calendar(year: int, month: int) -> InlineKeyboardMarkup:
     import pytz
     kyiv_tz = pytz.timezone('Europe/Kiev')
     today = datetime.now(kyiv_tz)
-    
+
     # Назви місяців українською
     months = [
         "Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
         "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"
     ]
-    
+
     # Створюємо календар
     keyboard = []
-    
+
     # Заголовок з місяцем та роком
     keyboard.append([
         InlineKeyboardButton(
-            text=f"{months[month-1]} {year}", 
+            text=f"{months[month - 1]} {year}",
             callback_data="ignore"
         )
     ])
-    
+
     # Дні тижня
     keyboard.append([
         InlineKeyboardButton(text="Пн", callback_data="ignore"),
@@ -292,10 +301,10 @@ def create_calendar(year: int, month: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="Сб", callback_data="ignore"),
         InlineKeyboardButton(text="Нд", callback_data="ignore"),
     ])
-    
+
     # Отримуємо календар для місяця
     month_calendar = calendar.monthcalendar(year, month)
-    
+
     for week in month_calendar:
         row = []
         for day in week:
@@ -308,40 +317,41 @@ def create_calendar(year: int, month: int) -> InlineKeyboardMarkup:
                     row.append(InlineKeyboardButton(text=" ", callback_data="ignore"))
                 else:
                     row.append(InlineKeyboardButton(
-                        text=str(day), 
+                        text=str(day),
                         callback_data=f"calendar_day_{year}_{month}_{day}"
                     ))
         keyboard.append(row)
-    
+
     # Кнопки навігації
     prev_month = month - 1
     prev_year = year
     if prev_month == 0:
         prev_month = 12
         prev_year -= 1
-        
+
     next_month = month + 1
     next_year = year
     if next_month == 13:
         next_month = 1
         next_year += 1
-    
+
     keyboard.append([
         InlineKeyboardButton(
-            text="◀️", 
+            text="◀️",
             callback_data=f"calendar_prev_{prev_year}_{prev_month}"
         ),
         InlineKeyboardButton(
-            text="🔙 Назад", 
+            text="🔙 Назад",
             callback_data="admin_back"
         ),
         InlineKeyboardButton(
-            text="▶️", 
+            text="▶️",
             callback_data=f"calendar_next_{next_year}_{next_month}"
         ),
     ])
-    
+
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
 
 @router.callback_query(F.data == "admin_plan_game")
 async def admin_game_handler(callback: CallbackQuery, state: FSMContext):
@@ -356,12 +366,13 @@ async def admin_game_handler(callback: CallbackQuery, state: FSMContext):
     await state.set_state(AdminStates.waiting_for_game_date)
     await callback.answer()
 
+
 @router.callback_query(F.data.startswith("calendar_day_"))
 async def process_calendar_day(callback: CallbackQuery, state: FSMContext):
     """Обробка вибору дня"""
     _, _, year, month, day = callback.data.split("_")
     date_obj = datetime(int(year), int(month), int(day))
-    
+
     await state.update_data(game_date=date_obj.strftime("%Y-%m-%d"))
     await callback.message.edit_text(
         f"✅ Вибрана дата: <b>{date_obj.strftime('%d.%m.%Y')}</b>\n\n"
@@ -370,6 +381,7 @@ async def process_calendar_day(callback: CallbackQuery, state: FSMContext):
     )
     await state.set_state(AdminStates.waiting_for_game_time)
     await callback.answer()
+
 
 @router.callback_query(F.data.startswith("calendar_prev_"))
 async def process_calendar_prev(callback: CallbackQuery):
@@ -380,6 +392,7 @@ async def process_calendar_prev(callback: CallbackQuery):
     )
     await callback.answer()
 
+
 @router.callback_query(F.data.startswith("calendar_next_"))
 async def process_calendar_next(callback: CallbackQuery):
     """Перехід до наступного місяця"""
@@ -389,10 +402,12 @@ async def process_calendar_next(callback: CallbackQuery):
     )
     await callback.answer()
 
+
 @router.callback_query(F.data == "ignore")
 async def ignore_callback(callback: CallbackQuery):
     """Ігноруємо неактивні кнопки"""
     await callback.answer()
+
 
 @router.message(AdminStates.waiting_for_game_time)
 async def process_game_time(message: Message, state: FSMContext, db: Database):
@@ -421,6 +436,7 @@ async def process_game_time(message: Message, state: FSMContext, db: Database):
             reply_markup=admin_back()
         )
 
+
 @router.message(AdminStates.waiting_for_additional_info)
 async def process_additional_info(message: Message, state: FSMContext, db: Database):
     additional_info = message.text.strip()
@@ -441,7 +457,6 @@ async def process_additional_info(message: Message, state: FSMContext, db: Datab
     )
 
     await state.clear()
-
 
 
 @router.callback_query(F.data == "admin_feedbacks", IsAdmin())
@@ -472,3 +487,118 @@ async def view_feedbacks(callback: CallbackQuery, db: Database):
 
     await callback.message.edit_text(text, reply_markup=admin_back())
     await callback.answer()
+
+
+# Обробник для кнопки "Зв'язок з користувачами"
+@router.callback_query(F.data == "admin_contacts")
+async def admin_contacts_handler(callback: CallbackQuery, state: FSMContext, db: Database):
+    # Показуємо список всіх користувачів
+    users = await get_all_users(db)
+    
+    if not users:
+        await callback.message.edit_text(
+            "📋 <b>Список користувачів порожній</b>",
+            reply_markup=admin_back()
+        )
+        await callback.answer()
+        return
+
+    text = "📨 <b>Відправити повідомлення користувачу</b>\n\n"
+    text += "👥 <b>Список користувачів:</b>\n\n"
+
+    for user in users[:15]:  # Показуємо перших 15 користувачів
+        telegram_id, username, first_name, is_admin, registered_at = user
+        admin_badge = " 👑" if is_admin else ""
+        username_text = f"@{username}" if username else "—"
+        text += f"📝 <b>{first_name}</b>{admin_badge}\n"
+        text += f"🆔 ID: <code>{telegram_id}</code>\n"
+        text += f"👤 Username: {username_text}\n\n"
+
+    if len(users) > 15:
+        text += f"<i>... та ще {len(users) - 15} користувачів</i>\n\n"
+    
+    text += "💡 <b>Введіть ID користувача, якому хочете написати:</b>"
+
+    await callback.message.edit_text(text, reply_markup=admin_back())
+    await state.set_state(AdminStates.waiting_for_user_id_to_message)
+    await callback.answer()
+
+
+@router.message(AdminStates.waiting_for_user_id_to_message)
+async def process_user_id_for_message(message: Message, state: FSMContext, db: Database):
+    try:
+        user_id = int(message.text.strip())
+        
+        # Перевіряємо чи існує користувач
+        user = await get_user_by_id(db, user_id)
+        if not user:
+            await message.answer("❌ Користувача з таким ID не знайдено!", reply_markup=admin_back())
+            await state.clear()
+            return
+        
+        telegram_id, username, first_name, is_admin = user
+        username_text = f"@{username}" if username else "—"
+        
+        # Зберігаємо ID користувача і показуємо інформацію
+        await state.update_data(target_user_id=user_id, target_user_name=first_name)
+        
+        text = (
+            f"👤 <b>Обраний користувач:</b>\n\n"
+            f"📝 Ім'я: <b>{first_name}</b>\n"
+            f"🆔 ID: <code>{user_id}</code>\n"
+            f"👤 Username: {username_text}\n\n"
+            f"💬 <b>Введіть текст повідомлення:</b>"
+        )
+        
+        await message.answer(text, reply_markup=admin_back())
+        await state.set_state(AdminStates.waiting_for_message_text)
+        
+    except ValueError:
+        await message.answer("❌ ID повинен бути числом!", reply_markup=admin_back())
+
+
+@router.message(AdminStates.waiting_for_message_text)
+async def process_message_text(message: Message, state: FSMContext, db: Database):
+    message_text = message.text.strip()
+    
+    if not message_text:
+        await message.answer("❌ Повідомлення не може бути порожнім. Спробуйте ще раз.")
+        return
+    
+    # Отримуємо дані з стейту
+    state_data = await state.get_data()
+    target_user_id = state_data.get('target_user_id')
+    target_user_name = state_data.get('target_user_name')
+    
+    try:
+        # Отримуємо ім'я адміна
+        admin_info = await db.fetchone("SELECT first_name FROM users WHERE telegram_id = %s", (message.from_user.id,))
+        admin_name = admin_info[0] if admin_info else "Адміністратор"
+        
+        # Формуємо повідомлення для користувача
+        user_message = (
+            f"📨 <b>Повідомлення від адміністратора</b>\n\n"
+            f"👨‍💼 <b>Від:</b> {admin_name}\n"
+            f"💬 <b>Повідомлення:</b> {message_text}\n\n"
+            f"📝 <i>Ви можете відповісти через меню 'Залишити відгук'</i>"
+        )
+        
+        # Відправляємо повідомлення користувачу
+        await message.bot.send_message(target_user_id, user_message)
+        
+        # Підтверджуємо адміну про успішну відправку
+        await message.answer(
+            f"✅ <b>Повідомлення успішно надіслано!</b>\n\n"
+            f"👤 Користувач: <b>{target_user_name}</b>\n"
+            f"🆔 ID: <code>{target_user_id}</code>\n"
+            f"💬 Повідомлення: {message_text}",
+            reply_markup=admin_back()
+        )
+        
+    except Exception as e:
+        await message.answer(
+            f"❌ Помилка при відправці повідомлення: {str(e)}",
+            reply_markup=admin_back()
+        )
+    
+    await state.clear()
