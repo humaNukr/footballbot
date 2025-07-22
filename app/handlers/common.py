@@ -209,12 +209,13 @@ async def register_to_match(callback: CallbackQuery, db: Database):
         first_name = result[0]
 
         insert_query = """
-                       INSERT INTO registrations (match_id, telegram_id, first_name, username)
-                       VALUES (%s, %s, %s, %s) AS new_reg
+                       INSERT INTO registrations (match_id, telegram_id, first_name, username, message)
+                       VALUES (%s, %s, %s, %s, NULL) AS new_reg
                        ON DUPLICATE KEY
                        UPDATE
                            first_name = new_reg.first_name,
-                           username = new_reg.username
+                           username = new_reg.username,
+                           message = new_reg.message
                        """
         await db.execute(insert_query, (match_id, telegram_id, first_name, username))
 
@@ -404,7 +405,6 @@ async def back_to_schedule(callback: CallbackQuery, db: Database):
         formatted_date = str(date)
         day_name = ""
 
-    # Створюємо текст повідомлення (точно як в show_schedule)
     text = (
         f"🎯 <b>Матч #{match_count}</b>\n"
         f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
