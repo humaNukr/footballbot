@@ -210,10 +210,10 @@ async def register_to_match(callback: CallbackQuery, db: Database):
 
         insert_query = """
                        INSERT INTO registrations (match_id, telegram_id, first_name, username)
-                       VALUES (%s, %s, %s, %s)
+                       VALUES (%s, %s, %s, %s) AS new_reg
                        ON DUPLICATE KEY UPDATE 
-                       first_name = VALUES(first_name), 
-                       username = VALUES(username)
+                       first_name = new_reg.first_name, 
+                       username = new_reg.username
                        """
         await db.execute(insert_query, (match_id, telegram_id, first_name, username))
 
@@ -263,9 +263,9 @@ async def process_decline_reason(message: Message, db: Database, state: FSMConte
     
     query = """
             INSERT INTO registrations (match_id, telegram_id, first_name, username, message)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s) AS new_reg
             ON DUPLICATE KEY UPDATE 
-            message = VALUES(message), 
+            message = new_reg.message, 
             registered_at = NOW()
             """
     await db.execute(query, (match_id, telegram_id, first_name, username, reason))

@@ -5,19 +5,19 @@ from datetime import datetime, time
 async def add_user(db: Database, telegram_id, username=None, first_name=None, last_name=None):
     query = """
             INSERT INTO users (telegram_id, username, first_name)
-            VALUES (%s, %s, %s)
+            VALUES (%s, %s, %s) AS new_user
             ON DUPLICATE KEY UPDATE 
-            username = VALUES(username), 
-            first_name = VALUES(first_name)
+            username = new_user.username, 
+            first_name = new_user.first_name
             """
     await db.execute(query, (telegram_id, username, first_name))
 
 async def get_all_users(db: Database):
     """Отримати список всіх користувачів"""
     query = """
-            SELECT telegram_id, username, first_name, is_admin, created_at
+            SELECT telegram_id, username, first_name, is_admin, registered_at
             FROM users 
-            ORDER BY created_at DESC 
+            ORDER BY registered_at DESC 
             """
     return await db.fetchall(query)
 
