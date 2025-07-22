@@ -309,10 +309,10 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
     if active_count == 0:
         text += "😔 Активних учасників поки немає."
     
-    # Додаємо кнопку "Назад"
+    # Додаємо кнопку "Назад" з ID матчу
     from app.keyboards.inline import InlineKeyboardMarkup, InlineKeyboardButton
     back_button = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_schedule")]
+        [InlineKeyboardButton(text="🔙 Назад", callback_data=f"back_to_schedule:{match_id}")]
     ])
 
     await callback.message.edit_text(text, reply_markup=back_button)
@@ -360,69 +360,56 @@ async def show_next_game(message: Message, db: Database):
     await message.answer(text)
 
 
-@router.callback_query(F.data.startswith("back_to_schedule`:"))
+@router.callback_query(F.data.startswith("back_to_schedule:"))
 async def back_to_schedule(callback: CallbackQuery, db: Database):
-    target_match_id = int(callback.data.split(":")[1])
+    match_id = int(callback.data.split(":")[1])
     query = """
-            SELECT first_name, date, time, message
+            SELECT id, first_name, date, time, message
             FROM schedule
-            ORDER BY date, time \
+            WHERE id = %s
             """
-    result = await db.fetchall(query)
+    result = await db.fetchone(query, (match_id,))
 
     if not result:
         await callback.message.edit_text(
-            "📭 <b>Розклад поки що порожній</b>\n\n"
-            "🔔 Ви отримаєте повідомлення, коли адмін додасть новий матч!\n\n"
-            "⚽ Готуйтеся до гри!"
+            "❌ <b>Матч не знайдено</b>\n\n"
+            "🔔 Можливо матч було видалено адміністратором."
         )
         await callback.answer()
         return
 
+    match_id_db, first_name, date, time_, msg = result
+    
     from datetime import datetime
-    matches_by_date = {}
-    for row in result:
-        first_name, date, time_, msg = row
-        date_key = str(date)
-        if date_key not in matches_by_date:
-            matches_by_date[date_key] = []
-        matches_by_date[date_key].append((first_name, date, time_, msg))
+    try:
+        date_obj = datetime.strptime(str(date), "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%d.%m.%Y")
+        day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
+    except:
+        formatted_date = str(date)
+        day_name = ""
 
-    text = "⚽ <b>🏆 РОЗКЛАД МАТЧІВ 🏆</b> ⚽\n"
+    text = f"⚽ <b>МАТЧ #{match_id_db}</b> ⚽\n"
     text += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    text += f"📅 <b>Дата:</b> {formatted_date}"
+    if day_name:
+        text += f" ({day_name})"
+    text += "\n"
+    text += f"🕐 <b>Час:</b> {time_}\n"
+    text += f"👨‍💼 <b>Організатор:</b> {first_name}\n"
+    text += f"📋 <b>Деталі:</b> {msg}\n\n"
+    
+    # Додаємо кнопки для участі
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id_db}"),
+            InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id_db}")
+        ],
+        [InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id_db}")]
+    ])
 
-    match_count = 0
-    for date_key, matches in matches_by_date.items():
-        match_count += 1
-        if match_count == target_match_id:
-
-            try:
-                date_obj = datetime.strptime(date_key, "%Y-%m-%d")
-                formatted_date = date_obj.strftime("%d.%m.%Y")
-                day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
-            except:
-                formatted_date = date_key
-                day_name = ""
-
-            text += f"📅 <b>{formatted_date}</b>"
-            if day_name:
-                text += f" ({day_name})"
-            text += "\n"
-            text += "┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈\n"
-
-            for first_name, date, time_, msg in matches:
-                match_count += 1
-                text += f"🎯 <b>Матч #{match_count}</b>\n"
-                text += f"🕐 <b>Час:</b> {time_}\n"
-                text += f"👨‍💼 <b>Організатор:</b> {first_name}\n"
-                text += f"📋 <b>Деталі:</b> {msg}\n"
-                text += f"━━━━━━━━━━━━━━━━━━\n\n"
-
-        text += "⚡ <i>Завжди будьте готові до гри!</i> ⚡\n"
-        text += "🔥 <i>Футбол - це життя!</i> 🔥"
-
-
-    await callback.message.edit_text(text)
+    await callback.message.edit_text(text, reply_markup=keyboard)
     await callback.answer()
 
 
