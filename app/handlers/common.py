@@ -365,74 +365,74 @@ async def show_next_game(message: Message, db: Database):
 
 @router.callback_query(F.data.startswith("back_to_schedule:"))
 async def back_to_schedule(callback: CallbackQuery, db: Database):
-    try:
-        target_match_id = int(callback.data.split(":")[1])
-    except (IndexError, ValueError):
-        await callback.answer("Помилка у форматі callback data.")
-        return
-
+    match_id = int(callback.data.split(":")[1])
+    
+    # Перевіряємо чи є користувач адміном
     user = await db.fetchone("SELECT is_admin FROM users WHERE telegram_id = %s", (callback.from_user.id,))
     is_admin = bool(user and user[0]) if user else False
 
+    # Отримуємо інформацію про конкретний матч
     query = """
-            SELECT id, first_name, date, time, message
-            FROM schedule
-            ORDER BY date, time
+            SELECT s.id, s.first_name, s.date, s.time, s.message
+            FROM schedule s
+            WHERE s.id = %s
             """
-    result = await db.fetchall(query)
-
+    result = await db.fetchone(query, (match_id,))
+    
     if not result:
-        await callback.message.edit_text(
-            "📭 <b>Розклад поки що порожній</b>\n\n"
-            "🔔 Ви отримаєте повідомлення, коли адмін додасть новий матч!\n\n"
-            "⚽ Готуйтеся до гри!"
-        )
-        await callback.answer()
+        await callback.answer("❌ Матч не знайдено", show_alert=True)
         return
 
-    # Проходимося по всіх матчах і знаходимо потрібний за порядковим номером
+    match_id, first_name, date, time_, msg = result
+
+    # Рахуємо порядковий номер матчу для відображення (як в show_schedule)
+    count_query = """
+            SELECT COUNT(*) + 1
+            FROM schedule 
+            WHERE (date < %s) OR (date = %s AND time < %s)
+            """
+    count_result = await db.fetchone(count_query, (date, date, time_))
+    match_count = count_result[0] if count_result else 1
+
+    # Форматуємо дату
     from datetime import datetime
-    match_count = 0
-    for match_id, first_name, date, time_, msg in result:
-        match_count += 1
-        if match_count == target_match_id:
-            # Форматуємо дату
-            try:
-                date_obj = datetime.strptime(str(date), "%Y-%m-%d")
-                formatted_date = date_obj.strftime("%d.%m.%Y")
-                day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
-            except:
-                formatted_date = str(date)
-                day_name = ""
+    try:
+        date_obj = datetime.strptime(str(date), "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%d.%m.%Y")
+        day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
+    except:
+        formatted_date = str(date)
+        day_name = ""
 
-            text = (
-                f"🎯 <b>Матч #{match_count}</b>\n"
-                f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
-                f"🕐 <b>Час:</b> {time_}\n"
-                f"👨‍💼 <b>Організатор:</b> {first_name}\n"
-                f"📋 <b>Деталі:</b> {msg}\n"
-                f"⚡  <i>Натисніть, щоб записатися 👇</i>\n"
-                f"🔥 <i>Футбол - це життя!</i> 🔥"
-            )
+    # Створюємо текст повідомлення (точно як в show_schedule)
+    text = (
+        f"🎯 <b>Матч #{match_count}</b>\n"
+        f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
+        f"🕐 <b>Час:</b> {time_}\n"
+        f"👨‍💼 <b>Організатор:</b> {first_name}\n"
+        f"📋 <b>Деталі:</b> {msg}\n"
+        f"⚡  <i>Натисніть, щоб записатися 👇</i>\n"
+        f"🔥 <i>Футбол - це життя!</i> 🔥"
+    )
 
-            keyboard_buttons = [
-                [
-                    InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id}"),
-                    InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
-                ],
-                [
-                    InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
-                ]
-            ]
-            if is_admin:
-                keyboard_buttons.append([
-                    InlineKeyboardButton(text="🗑️ Видалити цей матч", callback_data=f"delete_match:{match_id}")
-                ])
-            keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+    # Створюємо клавіатуру (точно як в show_schedule)
+    keyboard_buttons = [
+        [
+            InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id}"),
+            InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
+        ],
+        [
+            InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
+        ]
+    ]
+    if is_admin:
+        keyboard_buttons.append([
+            InlineKeyboardButton(text="🗑️ Видалити цей матч", callback_data=f"delete_match:{match_id}")
+        ])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
-            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
-            await callback.answer()
-            break
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+    await callback.answer()
 
 
 @router.message(F.text == "📋 Мої матчі")
