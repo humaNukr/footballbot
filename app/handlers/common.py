@@ -356,7 +356,6 @@ async def show_next_game(message: Message, db: Database):
     text += f"🕐 <b>Час:</b> {time_}\n"
     text += f"👨‍💼 <b>Організатор:</b> {first_name}\n"
     text += f"📋 <b>Деталі:</b> {msg}\n"
-    text += f"━━━━━━━━━━━━━━━━━━\n\n"
 
     await message.answer(text)
 
@@ -423,8 +422,8 @@ async def back_to_schedule(callback: CallbackQuery, db: Database):
         text += "🔥 <i>Футбол - це життя!</i> 🔥"
 
 
-        await callback.message.edit_text(text)
-        await callback.answer()
+    await callback.message.edit_text(text)
+    await callback.answer()
 
 
 @router.message(F.text == "📋 Мої матчі")
