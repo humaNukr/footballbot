@@ -364,7 +364,7 @@ async def show_next_game(message: Message, db: Database):
 
 
 @router.callback_query(F.data.startswith("back_to_schedule:"))
-async def back_to_schedule(message: Message, callback: CallbackQuery, db: Database):
+async def back_to_schedule(callback: CallbackQuery, db: Database):
     try:
         target_match_id = int(callback.data.split(":")[1])
     except (IndexError, ValueError):
