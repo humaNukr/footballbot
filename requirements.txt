@@ -3,3 +3,4 @@ asyncpg==0.29.0
 python-dotenv==1.0.1
 cryptography==42.0.8
 pytz==2025.2
+PyMySQL~=1.1.1
