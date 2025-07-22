@@ -361,7 +361,7 @@ async def show_next_game(message: Message, db: Database):
 
 
 @router.callback_query(F.data.startswith("back_to_schedule:"))
-async def back_to_schedule(callback: CallbackQuery, db: Database):
+async def back_to_schedule(message: Message, callback: CallbackQuery, db: Database):
     try:
         target_match_id = int(callback.data.split(":")[1])
     except (IndexError, ValueError):
@@ -391,42 +391,46 @@ async def back_to_schedule(callback: CallbackQuery, db: Database):
         date_key = str(date)
         matches_by_date.setdefault(date_key, []).append((first_name, date, time_, msg))
 
-    text = "⚽ <b>🏆 РОЗКЛАД МАТЧІВ 🏆</b> ⚽\n"
-    text += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-
-    date_index = 0
+    match_count = 0
     for date_key, matches in matches_by_date.items():
-        date_index += 1
-        if date_index == target_match_id:
-            try:
-                date_obj = datetime.strptime(date_key, "%Y-%m-%d")
-                formatted_date = date_obj.strftime("%d.%m.%Y")
-                day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
-            except:
-                formatted_date = date_key
-                day_name = ""
+        try:
+            date_obj = datetime.strptime(date_key, "%Y-%m-%d")
+            formatted_date = date_obj.strftime("%d.%m.%Y")
+            day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
+        except:
+            formatted_date = date_key
+            day_name = ""
 
-            text += f"📅 <b>{formatted_date}</b>"
-            if day_name:
-                text += f" ({day_name})"
-            text += "\n"
-            text += "┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈\n"
+        for match_id, first_name, date, time_, msg in matches:
+            match_count += 1
+            if match_count == target_match_id:
+                text = (
+                    f"🎯 <b>Матч #{match_count}</b>\n"
+                    f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
+                    f"🕐 <b>Час:</b> {time_}\n"
+                    f"👨‍💼 <b>Організатор:</b> {first_name}\n"
+                    f"📋 <b>Деталі:</b> {msg}\n"
+                    f"⚡  <i>Натисніть, щоб записатися 👇</i>\n"
+                    f"🔥 <i>Футбол - це життя!</i> 🔥"
+                )
 
-            match_number = 0
-            for first_name, date, time_, msg in matches:
-                match_number += 1
-                text += f"🎯 <b>Матч #{match_number}</b>\n"
-                text += f"🕐 <b>Час:</b> {time_}\n"
-                text += f"👨‍💼 <b>Організатор:</b> {first_name}\n"
-                text += f"📋 <b>Деталі:</b> {msg}\n"
-                text += f"━━━━━━━━━━━━━━━━━━\n\n"
-            break  # після того як знайшли потрібну дату — можна вийти з циклу
+                keyboard_buttons = [
+                    [
+                        InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id}"),
+                        InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
+                    ],
+                    [
+                        InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
+                    ]
+                ]
+                if is_admin:
+                    keyboard_buttons.append([
+                        InlineKeyboardButton(text="🗑️ Видалити цей матч", callback_data=f"delete_match:{match_id}")
+                    ])
+                keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
-    text += "⚡ <i>Завжди будьте готові до гри!</i> ⚡\n"
-    text += "🔥 <i>Футбол - це життя!</i> 🔥"
-
-    await callback.message.edit_text(text)
-    await callback.answer()
+                await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
+                break
 
 
 
