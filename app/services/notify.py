@@ -114,8 +114,8 @@ async def send_match_notifications(bot, db: Database):
         match_query = """
                 SELECT s.id, s.date, s.time, s.message, s.first_name
                 FROM schedule s
-                WHERE (s.date + s.time)::timestamp BETWEEN $1 AND $2
-                AND s.date >= CURRENT_DATE
+                WHERE TIMESTAMP(s.date, s.time) BETWEEN %s AND %s
+                AND s.date >= CURDATE()
                 ORDER BY s.date, s.time
                 """
         
@@ -132,7 +132,7 @@ async def send_match_notifications(bot, db: Database):
                     SELECT DISTINCT r.telegram_id, u.first_name
                     FROM registrations r
                     JOIN users u ON u.telegram_id = r.telegram_id
-                    WHERE r.match_id = $1 
+                    WHERE r.match_id = %s 
                     AND (r.message IS NULL OR r.message = '')
                     """
             

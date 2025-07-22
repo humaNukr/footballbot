@@ -199,7 +199,7 @@ async def register_to_match(callback: CallbackQuery, db: Database):
     username = callback.from_user.username
 
     try:
-        query_user = "SELECT first_name FROM users WHERE telegram_id = $1"
+        query_user = "SELECT first_name FROM users WHERE telegram_id = %s"
         result = await db.fetchone(query_user, (telegram_id,))
 
         if not result:
@@ -210,8 +210,10 @@ async def register_to_match(callback: CallbackQuery, db: Database):
 
         insert_query = """
                        INSERT INTO registrations (match_id, telegram_id, first_name, username)
-                       VALUES ($1, $2, $3, $4)
-                       ON CONFLICT (match_id, telegram_id) DO NOTHING
+                       VALUES (%s, %s, %s, %s)
+                       ON DUPLICATE KEY UPDATE 
+                       first_name = VALUES(first_name), 
+                       username = VALUES(username)
                        """
         await db.execute(insert_query, (match_id, telegram_id, first_name, username))
 
@@ -233,8 +235,8 @@ async def unregister_from_match(callback: CallbackQuery, db: Database, state: FS
     query = """
             DELETE
             FROM registrations
-            WHERE match_id = $1
-              AND telegram_id = $2
+            WHERE match_id = %s
+              AND telegram_id = %s
             """
     await db.execute(query, (match_id, user_id))
 
@@ -252,7 +254,7 @@ async def process_decline_reason(message: Message, db: Database, state: FSMConte
     telegram_id = message.from_user.id
     username = message.from_user.username
     query_get_user = """
-                     SELECT first_name, username FROM users WHERE telegram_id = $1
+                     SELECT first_name, username FROM users WHERE telegram_id = %s
                      """
     user = await db.fetchone(query_get_user, (telegram_id,))
     if not user:
@@ -261,9 +263,10 @@ async def process_decline_reason(message: Message, db: Database, state: FSMConte
     
     query = """
             INSERT INTO registrations (match_id, telegram_id, first_name, username, message)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (match_id, telegram_id) 
-            DO UPDATE SET message = $5, registered_at = CURRENT_TIMESTAMP
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE 
+            message = VALUES(message), 
+            registered_at = NOW()
             """
     await db.execute(query, (match_id, telegram_id, first_name, username, reason))
     await message.answer("👌 Дякую, повідомлення відправлене адміну!")
@@ -278,7 +281,7 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
     query = """
             SELECT first_name, username, message
             FROM registrations
-            WHERE match_id = $1
+            WHERE match_id = %s
             """
     participants = await db.fetchall(query, (match_id,))
 
@@ -368,7 +371,7 @@ async def refresh_my_matches(callback: CallbackQuery, db: Database):
             SELECT s.date, s.time, s.message
             FROM registrations r
                      JOIN schedule s ON s.id = r.match_id
-            WHERE r.telegram_id = $1 AND (r.message IS NULL OR r.message = '')
+            WHERE r.telegram_id = %s AND (r.message IS NULL OR r.message = '')
             ORDER BY s.date, s.time
             """
     matches = await db.fetchall(query, (callback.from_user.id,))
@@ -574,7 +577,7 @@ async def my_registrations(message: Message, db: Database):
             SELECT s.date, s.time, s.message
             FROM registrations r
                      JOIN schedule s ON s.id = r.match_id
-            WHERE r.telegram_id = $1 AND (r.message IS NULL OR r.message = '')
+            WHERE r.telegram_id = %s AND (r.message IS NULL OR r.message = '')
             ORDER BY s.date, s.time
             """
     matches = await db.fetchall(query, (message.from_user.id,))
@@ -624,6 +627,6 @@ async def my_registrations(message: Message, db: Database):
 @router.callback_query(F.data.startswith("delete_match:"))
 async def delete_match_callback(callback: CallbackQuery, db: Database):
     match_id = int(callback.data.split(":")[1])
-    await db.execute("DELETE FROM schedule WHERE id = $1", (match_id,))
+    await db.execute("DELETE FROM schedule WHERE id = %s", (match_id,))
     await callback.message.edit_text("🗑️ Матч видалено адміністратором.")
     await callback.answer("Матч видалено!")
