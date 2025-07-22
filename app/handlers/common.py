@@ -368,6 +368,9 @@ async def back_to_schedule(message: Message, callback: CallbackQuery, db: Databa
         await callback.answer("Помилка у форматі callback data.")
         return
 
+    user = await db.fetchone("SELECT is_admin FROM users WHERE telegram_id = %s", (callback.from_user.id,))
+    is_admin = bool(user and user[0]) if user else False
+
     query = """
             SELECT first_name, date, time, message
             FROM schedule
