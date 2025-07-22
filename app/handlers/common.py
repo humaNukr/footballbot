@@ -309,10 +309,10 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
     if active_count == 0:
         text += "😔 Активних учасників поки немає."
     
-    # Додаємо кнопку "Назад" з ID матчу
+    # Додаємо кнопку "Назад"
     from app.keyboards.inline import InlineKeyboardMarkup, InlineKeyboardButton
     back_button = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Назад", callback_data=f"back_to_schedule:{match_id}")]
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_schedule")]
     ])
 
     await callback.message.edit_text(text, reply_markup=back_button)
@@ -362,55 +362,72 @@ async def show_next_game(message: Message, db: Database):
 
 @router.callback_query(F.data.startswith("back_to_schedule:"))
 async def back_to_schedule(callback: CallbackQuery, db: Database):
-    match_id = int(callback.data.split(":")[1])
+    try:
+        target_match_id = int(callback.data.split(":")[1])
+    except (IndexError, ValueError):
+        await callback.answer("Помилка у форматі callback data.")
+        return
+
     query = """
-            SELECT id, first_name, date, time, message
+            SELECT first_name, date, time, message
             FROM schedule
-            WHERE id = %s
+            ORDER BY date, time \
             """
-    result = await db.fetchone(query, (match_id,))
+    result = await db.fetchall(query)
 
     if not result:
         await callback.message.edit_text(
-            "❌ <b>Матч не знайдено</b>\n\n"
-            "🔔 Можливо матч було видалено адміністратором."
+            "📭 <b>Розклад поки що порожній</b>\n\n"
+            "🔔 Ви отримаєте повідомлення, коли адмін додасть новий матч!\n\n"
+            "⚽ Готуйтеся до гри!"
         )
         await callback.answer()
         return
 
-    match_id_db, first_name, date, time_, msg = result
-    
     from datetime import datetime
-    try:
-        date_obj = datetime.strptime(str(date), "%Y-%m-%d")
-        formatted_date = date_obj.strftime("%d.%m.%Y")
-        day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
-    except:
-        formatted_date = str(date)
-        day_name = ""
+    matches_by_date = {}
+    for row in result:
+        first_name, date, time_, msg = row
+        date_key = str(date)
+        matches_by_date.setdefault(date_key, []).append((first_name, date, time_, msg))
 
-    text = f"⚽ <b>МАТЧ #{match_id_db}</b> ⚽\n"
+    text = "⚽ <b>🏆 РОЗКЛАД МАТЧІВ 🏆</b> ⚽\n"
     text += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    text += f"📅 <b>Дата:</b> {formatted_date}"
-    if day_name:
-        text += f" ({day_name})"
-    text += "\n"
-    text += f"🕐 <b>Час:</b> {time_}\n"
-    text += f"👨‍💼 <b>Організатор:</b> {first_name}\n"
-    text += f"📋 <b>Деталі:</b> {msg}\n\n"
-    
-    # Додаємо кнопки для участі
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id_db}"),
-            InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id_db}")
-        ],
-        [InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id_db}")]
-    ])
 
-    await callback.message.edit_text(text, reply_markup=keyboard)
+    date_index = 0
+    for date_key, matches in matches_by_date.items():
+        date_index += 1
+        if date_index == target_match_id:
+            try:
+                date_obj = datetime.strptime(date_key, "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%d.%m.%Y")
+                day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
+            except:
+                formatted_date = date_key
+                day_name = ""
+
+            text += f"📅 <b>{formatted_date}</b>"
+            if day_name:
+                text += f" ({day_name})"
+            text += "\n"
+            text += "┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈\n"
+
+            match_number = 0
+            for first_name, date, time_, msg in matches:
+                match_number += 1
+                text += f"🎯 <b>Матч #{match_number}</b>\n"
+                text += f"🕐 <b>Час:</b> {time_}\n"
+                text += f"👨‍💼 <b>Організатор:</b> {first_name}\n"
+                text += f"📋 <b>Деталі:</b> {msg}\n"
+                text += f"━━━━━━━━━━━━━━━━━━\n\n"
+            break  # після того як знайшли потрібну дату — можна вийти з циклу
+
+    text += "⚡ <i>Завжди будьте готові до гри!</i> ⚡\n"
+    text += "🔥 <i>Футбол - це життя!</i> 🔥"
+
+    await callback.message.edit_text(text)
     await callback.answer()
+
 
 
 @router.message(F.text == "📋 Мої матчі")
