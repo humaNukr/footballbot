@@ -211,9 +211,10 @@ async def register_to_match(callback: CallbackQuery, db: Database):
         insert_query = """
                        INSERT INTO registrations (match_id, telegram_id, first_name, username)
                        VALUES (%s, %s, %s, %s) AS new_reg
-                       ON DUPLICATE KEY UPDATE 
-                       first_name = new_reg.first_name, 
-                       username = new_reg.username
+                       ON DUPLICATE KEY
+                       UPDATE
+                           first_name = new_reg.first_name,
+                           username = new_reg.username
                        """
         await db.execute(insert_query, (match_id, telegram_id, first_name, username))
 
@@ -246,6 +247,7 @@ async def unregister_from_match(callback: CallbackQuery, db: Database, state: FS
     await state.set_state(GameStates.waiting_for_decline_reason)
     await state.update_data(match_id=match_id)
 
+
 @router.message(GameStates.waiting_for_decline_reason)
 async def process_decline_reason(message: Message, db: Database, state: FSMContext):
     reason = message.text.strip()
@@ -254,24 +256,26 @@ async def process_decline_reason(message: Message, db: Database, state: FSMConte
     telegram_id = message.from_user.id
     username = message.from_user.username
     query_get_user = """
-                     SELECT first_name, username FROM users WHERE telegram_id = %s
+                     SELECT first_name, username
+                     FROM users
+                     WHERE telegram_id = %s
                      """
     user = await db.fetchone(query_get_user, (telegram_id,))
     if not user:
         raise ValueError("Користувача не знайдено в базі.")
     first_name, username = user
-    
+
     query = """
             INSERT INTO registrations (match_id, telegram_id, first_name, username, message)
             VALUES (%s, %s, %s, %s, %s) AS new_reg
-            ON DUPLICATE KEY UPDATE 
-            message = new_reg.message, 
-            registered_at = NOW()
+            ON DUPLICATE KEY
+            UPDATE
+                message = new_reg.message,
+                registered_at = NOW()
             """
     await db.execute(query, (match_id, telegram_id, first_name, username, reason))
     await message.answer("👌 Дякую, повідомлення відправлене адміну!")
     await state.clear()
-
 
 
 @router.callback_query(F.data.startswith("match_participants:"))
@@ -308,7 +312,7 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
 
     if active_count == 0:
         text += "😔 Активних учасників поки немає."
-    
+
     # Додаємо кнопку "Назад"
     from app.keyboards.inline import InlineKeyboardMarkup, InlineKeyboardButton
     back_button = InlineKeyboardMarkup(inline_keyboard=[
@@ -317,7 +321,6 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
 
     await callback.message.edit_text(text, reply_markup=back_button)
     await callback.answer()
-
 
 
 @router.message(F.text == "🔥 Наступний матч!")
@@ -372,9 +375,9 @@ async def back_to_schedule(message: Message, callback: CallbackQuery, db: Databa
     is_admin = bool(user and user[0]) if user else False
 
     query = """
-            SELECT first_name, date, time, message
+            SELECT id, first_name, date, time, message
             FROM schedule
-            ORDER BY date, time \
+            ORDER BY date, time
             """
     result = await db.fetchall(query)
 
@@ -387,54 +390,49 @@ async def back_to_schedule(message: Message, callback: CallbackQuery, db: Databa
         await callback.answer()
         return
 
+    # Проходимося по всіх матчах і знаходимо потрібний за порядковим номером
     from datetime import datetime
-    matches_by_date = {}
-    for row in result:
-        first_name, date, time_, msg = row
-        date_key = str(date)
-        matches_by_date.setdefault(date_key, []).append((first_name, date, time_, msg))
-
     match_count = 0
-    for date_key, matches in matches_by_date.items():
-        try:
-            date_obj = datetime.strptime(date_key, "%Y-%m-%d")
-            formatted_date = date_obj.strftime("%d.%m.%Y")
-            day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
-        except:
-            formatted_date = date_key
-            day_name = ""
+    for match_id, first_name, date, time_, msg in result:
+        match_count += 1
+        if match_count == target_match_id:
+            # Форматуємо дату
+            try:
+                date_obj = datetime.strptime(str(date), "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%d.%m.%Y")
+                day_name = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"][date_obj.weekday()]
+            except:
+                formatted_date = str(date)
+                day_name = ""
 
-        for match_id, first_name, date, time_, msg in matches:
-            match_count += 1
-            if match_count == target_match_id:
-                text = (
-                    f"🎯 <b>Матч #{match_count}</b>\n"
-                    f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
-                    f"🕐 <b>Час:</b> {time_}\n"
-                    f"👨‍💼 <b>Організатор:</b> {first_name}\n"
-                    f"📋 <b>Деталі:</b> {msg}\n"
-                    f"⚡  <i>Натисніть, щоб записатися 👇</i>\n"
-                    f"🔥 <i>Футбол - це життя!</i> 🔥"
-                )
+            text = (
+                f"🎯 <b>Матч #{match_count}</b>\n"
+                f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
+                f"🕐 <b>Час:</b> {time_}\n"
+                f"👨‍💼 <b>Організатор:</b> {first_name}\n"
+                f"📋 <b>Деталі:</b> {msg}\n"
+                f"⚡  <i>Натисніть, щоб записатися 👇</i>\n"
+                f"🔥 <i>Футбол - це життя!</i> 🔥"
+            )
 
-                keyboard_buttons = [
-                    [
-                        InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id}"),
-                        InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
-                    ],
-                    [
-                        InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
-                    ]
+            keyboard_buttons = [
+                [
+                    InlineKeyboardButton(text="✅ Прийду", callback_data=f"register_match:{match_id}"),
+                    InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
+                ],
+                [
+                    InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
                 ]
-                if is_admin:
-                    keyboard_buttons.append([
-                        InlineKeyboardButton(text="🗑️ Видалити цей матч", callback_data=f"delete_match:{match_id}")
-                    ])
-                keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+            ]
+            if is_admin:
+                keyboard_buttons.append([
+                    InlineKeyboardButton(text="🗑️ Видалити цей матч", callback_data=f"delete_match:{match_id}")
+                ])
+            keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
-                await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
-                break
-
+            await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="HTML")
+            await callback.answer()
+            break
 
 
 @router.message(F.text == "📋 Мої матчі")
@@ -443,7 +441,8 @@ async def my_registrations(message: Message, db: Database):
             SELECT s.date, s.time, s.message
             FROM registrations r
                      JOIN schedule s ON s.id = r.match_id
-            WHERE r.telegram_id = %s AND (r.message IS NULL OR r.message = '')
+            WHERE r.telegram_id = %s
+              AND (r.message IS NULL OR r.message = '')
             ORDER BY s.date, s.time
             """
     matches = await db.fetchall(query, (message.from_user.id,))
@@ -457,10 +456,10 @@ async def my_registrations(message: Message, db: Database):
         return
 
     from datetime import datetime
-    
+
     text = "📋 <b>ВАШІ ЗАПЛАНОВАНІ МАТЧІ</b>\n"
     text += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    
+
     for i, (date, time_, schedule_msg) in enumerate(matches, 1):
         try:
             date_obj = datetime.strptime(str(date), "%Y-%m-%d")
@@ -469,20 +468,19 @@ async def my_registrations(message: Message, db: Database):
         except:
             formatted_date = str(date)
             day_name = ""
-        
+
         # Перевіряємо повідомлення
         if schedule_msg is None:
             schedule_msg = "Без деталей"
-        
+
         text += f"🎯 <b>МАТЧ #{i}</b>\n"
         text += f"📅 <b>Дата:</b> {formatted_date} ({day_name})\n"
         text += f"🕐 <b>Час:</b> {time_}\n"
         text += f"📋 <b>Деталі матчу:</b> {schedule_msg}\n\n"
-    
+
     text += "⚡ <i>Побачимося на полі!</i> ⚡"
 
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
 
     await message.answer(text)
 
