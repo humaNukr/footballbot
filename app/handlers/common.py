@@ -312,7 +312,7 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
     # Додаємо кнопку "Назад"
     from app.keyboards.inline import InlineKeyboardMarkup, InlineKeyboardButton
     back_button = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_schedule")]
+        [InlineKeyboardButton(text="🔙 Назад", callback_data=f"back_to_schedule:{match_id}")]
     ])
 
     await callback.message.edit_text(text, reply_markup=back_button)
