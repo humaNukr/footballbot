@@ -180,7 +180,8 @@ async def show_schedule(message: Message, db: Database, is_admin: bool = False):
                     InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
                 ],
                 [
-                    InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
+                    InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}"),
+                    InlineKeyboardButton(text="🍻 Піваси", callback_data=f"not_active_match_participants:{match_id}")
                 ]
             ]
             if is_admin:
@@ -324,6 +325,50 @@ async def show_match_participants(callback: CallbackQuery, db: Database):
     await callback.answer()
 
 
+@router.callback_query(F.data.startswith("not_active_match_participants:"))
+async def show_not_active_match_participants(callback: CallbackQuery, db: Database):
+    match_id = int(callback.data.split(":")[1])
+
+    query = """
+            SELECT first_name, username, message
+            FROM registrations
+            WHERE match_id = %s
+            """
+    participants = await db.fetchall(query, (match_id,))
+
+    if not participants:
+        await callback.answer("😔 Ще ніхто не відмовився від матчу.", show_alert=True)
+        return
+
+    text = f"👥 <b>Люди, які відмовилися від матчу #{match_id}</b>\n\n"
+    active_count = 0
+    for idx, (first_name, username, message) in enumerate(participants, start=1):
+        if message is None:
+            continue
+        active_count += 1
+        if first_name:
+            first_name = first_name
+        else:
+            first_name = "-"
+        if username:
+            username = username
+        else:
+            username = "-"
+        message = message
+        user_display = f"{first_name}, @{username}, Причина відмови: {message}"
+        text += f"{active_count}. {user_display}\n"
+
+
+    # Додаємо кнопку "Назад"
+    from app.keyboards.inline import InlineKeyboardMarkup, InlineKeyboardButton
+    back_button = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад", callback_data=f"back_to_schedule:{match_id}")]
+    ])
+
+    await callback.message.edit_text(text, reply_markup=back_button)
+    await callback.answer()
+
+
 @router.message(F.text == "🔥 Наступний матч!")
 async def show_next_game(message: Message, db: Database):
     query = """
@@ -422,7 +467,8 @@ async def back_to_schedule(callback: CallbackQuery, db: Database):
             InlineKeyboardButton(text="❌ Не прийду", callback_data=f"unregister_match:{match_id}"),
         ],
         [
-            InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}")
+            InlineKeyboardButton(text="👥 Учасники", callback_data=f"match_participants:{match_id}"),
+            InlineKeyboardButton(text="🍻 Піваси", callback_data=f"not_active_match_participants:{match_id}")
         ]
     ]
     if is_admin:

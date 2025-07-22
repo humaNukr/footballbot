@@ -53,6 +53,10 @@ async def push_users_db_update(message: Message, state: FSMContext, db: Database
                                telegram_id=None, username=None, first_name=None):
 
     admins = await get_admins(db)
+    if username:
+        username = username
+    else:
+        username = "-"
 
     register_text = ("👤 Новий користувач зареєстрований! Його дані: \n\n"
                      "ID: <code>{telegram_id}</code>\n"
